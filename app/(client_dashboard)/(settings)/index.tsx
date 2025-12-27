@@ -13,10 +13,11 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 
 import { router } from 'expo-router';
-import { useAuth } from '@/context/AuthContext';
+;
+import { useClientAuth } from '@/context/ClientAuthContext';
 
 const SettingsScreen: React.FC = () => {
-  const { user, signOut } = useAuth();
+  const { user, signOut } = useClientAuth();
   
   const [pushNotifications, setPushNotifications] = useState(true);
   const [emailNotifications, setEmailNotifications] = useState(true);
@@ -149,7 +150,7 @@ const SettingsScreen: React.FC = () => {
               icon="person-outline"
               title="Edit Profile"
               subtitle="Update your personal information"
-              onPress={() => router.push('/(dashboard)/(settings)/profile')}
+              onPress={() => router.push('/(client_dashboard)/(settings)/profile')}
             />
             <SettingItem
               icon="key-outline"

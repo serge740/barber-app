@@ -2,21 +2,23 @@ import React, { useEffect } from "react";
 import { View, ActivityIndicator, StyleSheet } from "react-native";
 import { router } from "expo-router";
 import { useAuth } from "@/context/AuthContext";
+import { useClientAuth } from "@/context/ClientAuthContext";
+
 
 interface Props {
   children: React.ReactNode;
 }
 
-export default function UserOnly({ children }: Props) {
-  const { isAuthenticated, loading } = useAuth();
+export default function GuestOnly({ children }: Props) {
+  const { isAuthenticated, loading } = useClientAuth();
 
   useEffect(() => {
-    if (!loading && !isAuthenticated) {
-      router.replace("/(auth)/barber_login");
+    if (!loading && isAuthenticated) {
+      router.replace("/(client_dashboard)");
     }
   }, [isAuthenticated, loading]);
 
-  if (loading || !isAuthenticated) {
+  if (loading) {
     return (
       <View style={styles.container}>
         <ActivityIndicator size="large" color="#6F4E37" />

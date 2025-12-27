@@ -12,8 +12,8 @@ export default function UserTypeSelectionScreen() {
     if (selectedType) {
       console.log(`User selected: ${selectedType}`);
       // Navigate based on selection
-      if (selectedType === 'client') router.push('/(guest)')
-      if (selectedType === 'barber') router.push('/(auth)/login')
+      if (selectedType === 'client') router.push('/(auth)/client_login')
+      if (selectedType === 'barber') router.push('/(auth)/barber_login')
     }
   };
 

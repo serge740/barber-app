@@ -40,13 +40,13 @@ const SettingLayout = () => {
   );
 
   return (
-    <Stack screenOptions={{ headerShown: false, animation: 'default', }}>
+    <Stack screenOptions={{ headerShown: false , animation: 'default',}}>
       <Stack.Screen name='index' />
-      <Stack.Screen name='profile' options={{ 
+      <Stack.Screen name='profile'  options={{ 
             headerShown: false,
             // Prevent auto-pop when navigating away
             gestureEnabled: true,
-          }}  />
+          }} />
     </Stack>
   );
 };

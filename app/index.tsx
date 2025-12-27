@@ -1,4 +1,4 @@
-import React, { useState, useRef, JSX } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,18 +8,22 @@ import {
   ScrollView,
   NativeSyntheticEvent,
   NativeScrollEvent,
+  ActivityIndicator,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 
 const { width, height } = Dimensions.get('window');
+
+const ONBOARDING_KEY = '@has_seen_onboarding';
 
 interface OnboardingItem {
   id: number;
   image: string;
   title: string;
   description: string;
-  icon: keyof typeof Ionicons.glyphMap; // Ensures valid Ionicons name
+  icon: keyof typeof Ionicons.glyphMap;
 }
 
 const onboardingData: OnboardingItem[] = [
@@ -46,9 +50,40 @@ const onboardingData: OnboardingItem[] = [
   },
 ];
 
-export default function OnboardingScreen(): JSX.Element {
+export default function OnboardingScreen() {
   const [currentIndex, setCurrentIndex] = useState<number>(0);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const scrollViewRef = useRef<ScrollView>(null);
+
+  // Check if user has seen onboarding on mount
+  useEffect(() => {
+    checkOnboardingStatus();
+  }, []);
+
+  const checkOnboardingStatus = async () => {
+    try {
+      const hasSeenOnboarding = await AsyncStorage.getItem(ONBOARDING_KEY);
+      
+      if (hasSeenOnboarding === 'true') {
+        // User has already seen onboarding, navigate to auth
+        router.replace('/(auth)');
+      } else {
+        // Show onboarding
+        setIsLoading(false);
+      }
+    } catch (error) {
+      console.error('Error checking onboarding status:', error);
+      setIsLoading(false);
+    }
+  };
+
+  const markOnboardingComplete = async () => {
+    try {
+      await AsyncStorage.setItem(ONBOARDING_KEY, 'true');
+    } catch (error) {
+      console.error('Error saving onboarding status:', error);
+    }
+  };
 
   const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const contentOffsetX = event.nativeEvent.contentOffset.x;
@@ -72,15 +107,24 @@ export default function OnboardingScreen(): JSX.Element {
     }
   };
 
-  const handleSkip = () => {
-    scrollToIndex(onboardingData.length - 1);
+  const handleSkip = async () => {
+    await markOnboardingComplete();
+    router.replace('/(auth)');
   };
 
-  const handleGetStarted = () => {
-    // Navigate to main app (e.g., using React Navigation)
-    router.push('/(auth)');
-    console.log('Get Started pressed');
+  const handleGetStarted = async () => {
+    await markOnboardingComplete();
+    router.replace('/(auth)');
   };
+
+  // Show loading screen while checking status
+  if (isLoading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' }}>
+        <ActivityIndicator size="large" color="#6F4E37" />
+      </View>
+    );
+  }
 
   return (
     <View style={{ flex: 1, backgroundColor: '#fff' }}>
@@ -120,7 +164,6 @@ export default function OnboardingScreen(): JSX.Element {
               style={{ width: '100%', height: '100%' }}
               resizeMode="cover"
             />
-            {/* Gradient Overlay */}
             <View
               style={{
                 position: 'absolute',
@@ -129,9 +172,6 @@ export default function OnboardingScreen(): JSX.Element {
                 right: 0,
                 height: 150,
                 backgroundColor: 'transparent',
-                // Note: React Native doesn't support CSS gradients directly.
-                // You'll need a library like expo-linear-gradient or an overlay image.
-                // This is kept for design reference.
               }}
             />
           </View>

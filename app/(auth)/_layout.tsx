@@ -7,7 +7,8 @@ export default function BarberAuthLayout() {
     <>
       <Stack>
         <Stack.Screen name="index" options={{ headerShown: false }} />
-        <Stack.Screen name="login" options={{ headerShown: false }} />
+        <Stack.Screen name="barber_login" options={{ headerShown: false }} />
+        <Stack.Screen name="client_login" options={{ headerShown: false }} />
       
       </Stack>
       

@@ -2,17 +2,18 @@ import React, { useEffect } from "react";
 import { View, ActivityIndicator, StyleSheet } from "react-native";
 import { router } from "expo-router";
 import { useAuth } from "@/context/AuthContext";
+import { useClientAuth } from "@/context/ClientAuthContext";
 
 interface Props {
   children: React.ReactNode;
 }
 
 export default function UserOnly({ children }: Props) {
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, loading } = useClientAuth();
 
   useEffect(() => {
     if (!loading && !isAuthenticated) {
-      router.replace("/(auth)/barber_login");
+      router.replace("/(auth)/client_login");
     }
   }, [isAuthenticated, loading]);
 

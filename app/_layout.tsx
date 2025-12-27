@@ -5,6 +5,7 @@ import 'react-native-reanimated';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { AuthProvider } from '@/context/AuthContext';
+import { ClientAuthProvider } from '@/context/ClientAuthContext';
 
 export const unstable_settings = {
   anchor: '(tabs)',
@@ -15,6 +16,8 @@ export default function RootLayout() {
 
   return (
       <AuthProvider>
+      <ClientAuthProvider>
+
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
 
       <Stack>
@@ -23,11 +26,13 @@ export default function RootLayout() {
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
         <Stack.Screen name="(guest)" options={{ headerShown: false }} />
         <Stack.Screen name="(dashboard)" options={{ headerShown: false }} />
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="(client_dashboard)" options={{ headerShown: false }} />
+        
         <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
       </Stack>
       <StatusBar style="dark" backgroundColor={'#6F4E37'}  />
     </ThemeProvider>
+      </ClientAuthProvider>
       </AuthProvider>
   );
 }
