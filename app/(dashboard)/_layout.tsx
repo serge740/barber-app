@@ -44,20 +44,29 @@ export default function DashboardLayout() {
           }}
         />
         <Tabs.Screen
-          name="orders"
+          name="(book)"
           options={{
-            title: 'Orders',
+            title: 'Booking',
             tabBarIcon: ({ color, size }) => (
               <Ionicons name="receipt" size={size} color={color} />
             ),
           }}
         />
         <Tabs.Screen
-          name="profile"
+          name="(users)"
           options={{
-            title: 'Profile',
+            title: 'Users',
             tabBarIcon: ({ color, size }) => (
-              <Ionicons name="person" size={size} color={color} />
+              <Ionicons name="people-circle" size={size} color={color} />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="(settings)"
+          options={{
+            title: 'Settings',
+            tabBarIcon: ({ color, size }) => (
+              <Ionicons name="settings" size={size} color={color} />
             ),
           }}
         />

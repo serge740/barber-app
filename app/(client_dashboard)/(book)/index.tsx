@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
     View,
     Text,
@@ -12,16 +12,18 @@ import {
     ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { useClientAuth } from '@/context/ClientAuthContext';
-import { getBookingsByUser, updateBooking, deleteBooking, Booking, BookingStatus } from '@/services/bookingService';
+import { getBookingsByUser, Booking } from '@/services/bookingService';
+
+type DateFilter = 'ALL' | 'TODAY' | 'WEEK' | 'MONTH' | 'YEAR';
 
 const ClientBookingsScreen = () => {
     const { user } = useClientAuth();
     const [bookings, setBookings] = useState<Booking[]>([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
-    const [filter, setFilter] = useState<'ALL' | BookingStatus>('ALL');
+    const [dateFilter, setDateFilter] = useState<DateFilter>('ALL');
 
     const fetchBookings = async () => {
         if (!user?.id) return;
@@ -46,87 +48,18 @@ const ClientBookingsScreen = () => {
         }
     };
 
-    useEffect(() => {
-        fetchBookings();
-    }, [user]);
+    // Use useFocusEffect to fetch bookings every time component mounts
+    useFocusEffect(
+        useCallback(() => {
+            fetchBookings();
+        }, [user])
+    );
 
     const onRefresh = useCallback(async () => {
         setRefreshing(true);
         await fetchBookings();
         setRefreshing(false);
     }, [user]);
-
-    const handleCancelBooking = (bookingId: string) => {
-        Alert.alert(
-            'Cancel Booking',
-            'Are you sure you want to cancel this booking?',
-            [
-                { text: 'No', style: 'cancel' },
-                {
-                    text: 'Yes, Cancel',
-                    style: 'destructive',
-                    onPress: async () => {
-                        try {
-                            await updateBooking(bookingId, { status: 'CANCELLED' });
-                            await fetchBookings();
-                            Alert.alert('Success', 'Booking cancelled successfully');
-                        } catch (error: any) {
-                            Alert.alert('Error', 'Failed to cancel booking');
-                        }
-                    },
-                },
-            ]
-        );
-    };
-
-    const handleDeleteBooking = (bookingId: string) => {
-        Alert.alert(
-            'Delete Booking',
-            'Are you sure you want to delete this booking? This action cannot be undone.',
-            [
-                { text: 'No', style: 'cancel' },
-                {
-                    text: 'Yes, Delete',
-                    style: 'destructive',
-                    onPress: async () => {
-                        try {
-                            await deleteBooking(bookingId);
-                            await fetchBookings();
-                            Alert.alert('Success', 'Booking deleted successfully');
-                        } catch (error: any) {
-                            Alert.alert('Error', 'Failed to delete booking');
-                        }
-                    },
-                },
-            ]
-        );
-    };
-
-    const getStatusColor = (status: BookingStatus) => {
-        switch (status) {
-            case 'PENDING':
-                return '#FFA500';
-            case 'COMPLETED':
-                return '#4CAF50';
-            case 'CANCELLED':
-                return '#F44336';
-            default:
-                return '#999';
-        }
-    };
-
-    const getStatusIcon = (status: BookingStatus) => {
-        switch (status) {
-            case 'PENDING':
-                return 'time-outline';
-            case 'COMPLETED':
-                return 'checkmark-circle';
-            case 'CANCELLED':
-                return 'close-circle';
-            default:
-                return 'help-circle';
-        }
-    };
 
     const formatDate = (timestamp: any) => {
         const date = new Date(timestamp);
@@ -150,84 +83,106 @@ const ClientBookingsScreen = () => {
         return new Date(timestamp) > new Date();
     };
 
-    const filteredBookings = bookings.filter(booking => {
+    const getDaysUntil = (timestamp: any) => {
+        const now = new Date();
+        const bookingDate = new Date(timestamp);
+        const diffTime = bookingDate.getTime() - now.getTime();
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        return diffDays;
+    };
+
+    const getUpcomingText = (timestamp: any) => {
+        const days = getDaysUntil(timestamp);
+        
+        if (days < 0) return null; // Past booking
+        if (days === 0) return 'Today';
+        if (days === 1) return 'Tomorrow';
+        if (days <= 7) return `In ${days} days`;
+        if (days <= 30) return `In ${Math.ceil(days / 7)} weeks`;
+        return `In ${Math.ceil(days / 30)} months`;
+    };
+
+    const isInDateRange = (timestamp: any, filter: DateFilter): boolean => {
         if (filter === 'ALL') return true;
-        return booking.status === filter;
-    });
+
+        const now = new Date();
+        const bookingDate = new Date(timestamp);
+        
+        // Reset time to start of day for accurate comparison
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const bookingDay = new Date(bookingDate.getFullYear(), bookingDate.getMonth(), bookingDate.getDate());
+
+        switch (filter) {
+            case 'TODAY':
+                return bookingDay.getTime() === today.getTime();
+            
+            case 'WEEK':
+                const weekStart = new Date(today);
+                weekStart.setDate(today.getDate() - today.getDay()); // Start of week (Sunday)
+                const weekEnd = new Date(weekStart);
+                weekEnd.setDate(weekStart.getDate() + 6); // End of week (Saturday)
+                return bookingDay >= weekStart && bookingDay <= weekEnd;
+            
+            case 'MONTH':
+                return bookingDate.getMonth() === now.getMonth() && 
+                       bookingDate.getFullYear() === now.getFullYear();
+            
+            case 'YEAR':
+                return bookingDate.getFullYear() === now.getFullYear();
+            
+            default:
+                return true;
+        }
+    };
+
+    const filteredBookings = bookings.filter(booking => 
+        isInDateRange(booking.bookingDate, dateFilter)
+    );
 
     const renderBookingCard = (booking: Booking) => {
         const upcoming = isUpcoming(booking.bookingDate);
-        const statusColor = getStatusColor(booking.status);
+        const upcomingText = getUpcomingText(booking.bookingDate);
 
         return (
             <TouchableOpacity
-                // style={styles.bookingCard}
+                key={booking.id}
+                style={styles.bookingCard}
                 onPress={() => router.push(`/(client_dashboard)/(book)/${booking.id}`)}
             >
-
-                <View key={booking.id} style={styles.bookingCard}>
-                    {/* Status Badge */}
-                    <View style={[styles.statusBadge, { backgroundColor: statusColor }]}>
-                        <Ionicons name={getStatusIcon(booking.status)} size={16} color="white" />
-                        <Text style={styles.statusBadgeText}>{booking.status}</Text>
+                {/* Upcoming Badge */}
+                {upcoming && upcomingText && (
+                    <View style={styles.upcomingBadgeTop}>
+                        <Ionicons name="time-outline" size={16} color="#4CAF50" />
+                        <Text style={styles.upcomingBadgeTopText}>{upcomingText}</Text>
                     </View>
+                )}
 
-                    {/* Booking Info */}
-                    <View style={styles.bookingInfo}>
-                        <View style={styles.bookingDateContainer}>
-                            <Ionicons name="calendar" size={24} color="#6F4E37" />
-                            <View style={styles.bookingDateInfo}>
-                                <Text style={styles.bookingDate}>{formatDate(booking.bookingDate)}</Text>
-                                <Text style={styles.bookingTime}>{formatTime(booking.bookingDate)}</Text>
-                            </View>
-                            {upcoming && booking.status === 'PENDING' && (
-                                <View style={styles.upcomingBadge}>
-                                    <Text style={styles.upcomingBadgeText}>Upcoming</Text>
-                                </View>
-                            )}
+                {/* Booking Info */}
+                <View style={styles.bookingInfo}>
+                    <View style={styles.bookingDateContainer}>
+                        <Ionicons name="calendar" size={24} color="#6F4E37" />
+                        <View style={styles.bookingDateInfo}>
+                            <Text style={styles.bookingDate}>{formatDate(booking.bookingDate)}</Text>
+                            <Text style={styles.bookingTime}>{formatTime(booking.bookingDate)}</Text>
                         </View>
-
-                        {booking.notes && (
-                            <View style={styles.notesContainer}>
-                                <Ionicons name="document-text-outline" size={16} color="#666" />
-                                <Text style={styles.notesText} numberOfLines={2}>
-                                    {booking.notes}
-                                </Text>
-                            </View>
-                        )}
-
-                        {booking.createdAt && (
-                            <View style={styles.createdAtContainer}>
-                                <Ionicons name="time-outline" size={14} color="#999" />
-                                <Text style={styles.createdAtText}>
-                                    Booked on {formatDate(booking.createdAt)}
-                                </Text>
-                            </View>
-                        )}
+                        <Ionicons name="chevron-forward" size={20} color="#999" />
                     </View>
 
-                    {/* Actions */}
-                    {booking.status === 'PENDING' && upcoming && (
-                        <View style={styles.actionsContainer}>
-                            <TouchableOpacity
-                                style={styles.cancelButton}
-                                onPress={() => handleCancelBooking(booking.id)}
-                            >
-                                <Ionicons name="close-circle-outline" size={20} color="#F44336" />
-                                <Text style={styles.cancelButtonText}>Cancel</Text>
-                            </TouchableOpacity>
+                    {booking.notes && (
+                        <View style={styles.notesContainer}>
+                            <Ionicons name="document-text-outline" size={16} color="#666" />
+                            <Text style={styles.notesText} numberOfLines={2}>
+                                {booking.notes}
+                            </Text>
                         </View>
                     )}
 
-                    {(booking.status === 'CANCELLED' || booking.status === 'COMPLETED') && (
-                        <View style={styles.actionsContainer}>
-                            <TouchableOpacity
-                                style={styles.deleteButton}
-                                onPress={() => handleDeleteBooking(booking.id)}
-                            >
-                                <Ionicons name="trash-outline" size={20} color="#999" />
-                                <Text style={styles.deleteButtonText}>Delete</Text>
-                            </TouchableOpacity>
+                    {booking.createdAt && (
+                        <View style={styles.createdAtContainer}>
+                            <Ionicons name="time-outline" size={14} color="#999" />
+                            <Text style={styles.createdAtText}>
+                                Booked on {formatDate(booking.createdAt.toDate())}
+                            </Text>
                         </View>
                     )}
                 </View>
@@ -253,22 +208,28 @@ const ClientBookingsScreen = () => {
             {/* Filter Tabs */}
             <View style={styles.filterContainer}>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterScroll}>
-                    {['ALL', 'PENDING', 'COMPLETED', 'CANCELLED'].map((status) => (
+                    {[
+                        { key: 'ALL', label: 'All' },
+                        { key: 'TODAY', label: 'Today' },
+                        { key: 'WEEK', label: 'This Week' },
+                        { key: 'MONTH', label: 'This Month' },
+                        { key: 'YEAR', label: 'This Year' },
+                    ].map((filter) => (
                         <TouchableOpacity
-                            key={status}
+                            key={filter.key}
                             style={[
                                 styles.filterTab,
-                                filter === status && styles.filterTabActive,
+                                dateFilter === filter.key && styles.filterTabActive,
                             ]}
-                            onPress={() => setFilter(status as any)}
+                            onPress={() => setDateFilter(filter.key as DateFilter)}
                         >
                             <Text
                                 style={[
                                     styles.filterTabText,
-                                    filter === status && styles.filterTabTextActive,
+                                    dateFilter === filter.key && styles.filterTabTextActive,
                                 ]}
                             >
-                                {status}
+                                {filter.label}
                             </Text>
                         </TouchableOpacity>
                     ))}
@@ -300,9 +261,9 @@ const ClientBookingsScreen = () => {
                             <Ionicons name="calendar-outline" size={80} color="#D0C4B0" />
                             <Text style={styles.emptyTitle}>No Bookings Found</Text>
                             <Text style={styles.emptyText}>
-                                {filter === 'ALL'
+                                {dateFilter === 'ALL'
                                     ? "You haven't made any bookings yet."
-                                    : `No ${filter.toLowerCase()} bookings.`}
+                                    : `No bookings for ${dateFilter.toLowerCase()}.`}
                             </Text>
                             <TouchableOpacity
                                 style={styles.bookNowButton}
@@ -431,20 +392,21 @@ const styles = StyleSheet.create({
         shadowRadius: 4,
         elevation: 2,
     },
-    statusBadge: {
+    upcomingBadgeTop: {
         flexDirection: 'row',
         alignItems: 'center',
         alignSelf: 'flex-start',
         paddingHorizontal: 12,
         paddingVertical: 6,
         borderRadius: 16,
+        backgroundColor: '#E8F5E9',
         marginBottom: 12,
         gap: 6,
     },
-    statusBadgeText: {
-        color: 'white',
+    upcomingBadgeTopText: {
         fontSize: 12,
-        fontWeight: 'bold',
+        color: '#4CAF50',
+        fontWeight: '600',
     },
     bookingInfo: {
         gap: 12,
@@ -467,17 +429,6 @@ const styles = StyleSheet.create({
         color: '#666',
         marginTop: 2,
     },
-    upcomingBadge: {
-        backgroundColor: '#E8F5E9',
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 8,
-    },
-    upcomingBadgeText: {
-        fontSize: 12,
-        color: '#4CAF50',
-        fontWeight: '600',
-    },
     notesContainer: {
         flexDirection: 'row',
         alignItems: 'flex-start',
@@ -499,45 +450,6 @@ const styles = StyleSheet.create({
     },
     createdAtText: {
         fontSize: 12,
-        color: '#999',
-    },
-    actionsContainer: {
-        flexDirection: 'row',
-        justifyContent: 'flex-end',
-        marginTop: 12,
-        paddingTop: 12,
-        borderTopWidth: 1,
-        borderTopColor: '#E0D5C7',
-        gap: 12,
-    },
-    cancelButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 6,
-        paddingHorizontal: 16,
-        paddingVertical: 8,
-        borderRadius: 8,
-        borderWidth: 1,
-        borderColor: '#F44336',
-    },
-    cancelButtonText: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: '#F44336',
-    },
-    deleteButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 6,
-        paddingHorizontal: 16,
-        paddingVertical: 8,
-        borderRadius: 8,
-        borderWidth: 1,
-        borderColor: '#999',
-    },
-    deleteButtonText: {
-        fontSize: 14,
-        fontWeight: '600',
         color: '#999',
     },
     emptyContainer: {

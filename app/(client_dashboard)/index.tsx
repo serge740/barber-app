@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -10,17 +10,15 @@ import {
 } from 'react-native';
 import { useClientAuth } from '@/context/ClientAuthContext';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
-import firestore, { FirebaseFirestoreTypes } from '@react-native-firebase/firestore';
-// Types
-type BookingStatus = 'PENDING' | 'CONFIRMED' | 'COMPLETED' | 'CANCELLED';
+import { router, useFocusEffect } from 'expo-router';
+import firestore from '@react-native-firebase/firestore';
 
 interface Booking {
   id: string;
   bookingDate: Date;
-  status: BookingStatus;
   barberName?: string;
   serviceName?: string;
+  notes?: string;
 }
 
 export default function ClientHomeScreen() {
@@ -29,7 +27,6 @@ export default function ClientHomeScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  // Mock function - replace with your actual Firestore query
   const fetchRecentBooking = async () => {
     setLoading(true);
     try {
@@ -55,50 +52,22 @@ export default function ClientHomeScreen() {
       setLoading(false);
     }
   };
- useEffect(() => {
-    if (!user) {
-      setLoading(false);
-      return;
-    }
 
-
-    fetchRecentBooking();
-  }, [user]);
+  // Use useFocusEffect to fetch bookings every time component mounts
+  useFocusEffect(
+    useCallback(() => {
+      if (!user) {
+        setLoading(false);
+        return;
+      }
+      fetchRecentBooking();
+    }, [user])
+  );
 
   const onRefresh = async () => {
     setRefreshing(true);
     await fetchRecentBooking();
     setRefreshing(false);
-  };
-
-  const getStatusColor = (status: BookingStatus) => {
-    switch (status) {
-      case 'PENDING':
-        return '#FFA500';
-      case 'CONFIRMED':
-        return '#6F4E37';
-      case 'COMPLETED':
-        return '#4CAF50';
-      case 'CANCELLED':
-        return '#FF4444';
-      default:
-        return '#999';
-    }
-  };
-
-  const getStatusIcon = (status: BookingStatus) => {
-    switch (status) {
-      case 'PENDING':
-        return 'time-outline';
-      case 'CONFIRMED':
-        return 'checkmark-circle-outline';
-      case 'COMPLETED':
-        return 'checkmark-done-circle-outline';
-      case 'CANCELLED':
-        return 'close-circle-outline';
-      default:
-        return 'help-circle-outline';
-    }
   };
 
   const formatDate = (date: Date) => {
@@ -116,6 +85,29 @@ export default function ClientHomeScreen() {
       hour: '2-digit',
       minute: '2-digit',
     });
+  };
+
+  const isUpcoming = (date: Date) => {
+    return new Date(date) > new Date();
+  };
+
+  const getDaysUntil = (date: Date) => {
+    const now = new Date();
+    const bookingDate = new Date(date);
+    const diffTime = bookingDate.getTime() - now.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays;
+  };
+
+  const getUpcomingText = (date: Date) => {
+    const days = getDaysUntil(date);
+    
+    if (days < 0) return null; // Past booking
+    if (days === 0) return 'Today';
+    if (days === 1) return 'Tomorrow';
+    if (days <= 7) return `In ${days} days`;
+    if (days <= 30) return `In ${Math.ceil(days / 7)} weeks`;
+    return `In ${Math.ceil(days / 30)} months`;
   };
 
   return (
@@ -164,6 +156,16 @@ export default function ClientHomeScreen() {
             style={styles.bookingCard}
             onPress={() => router.push(`/(client_dashboard)/(book)/${recentBooking.id}`)}
           >
+            {/* Upcoming Badge */}
+            {isUpcoming(recentBooking.bookingDate) && (
+              <View style={styles.upcomingBadge}>
+                <Ionicons name="time-outline" size={16} color="#4CAF50" />
+                <Text style={styles.upcomingBadgeText}>
+                  {getUpcomingText(recentBooking.bookingDate)}
+                </Text>
+              </View>
+            )}
+
             <View style={styles.bookingHeader}>
               <View style={styles.bookingDateContainer}>
                 <Ionicons name="calendar" size={24} color="#6F4E37" />
@@ -176,48 +178,40 @@ export default function ClientHomeScreen() {
                   </Text>
                 </View>
               </View>
-              <View
-                style={[
-                  styles.statusBadge,
-                  { backgroundColor: getStatusColor(recentBooking.status) + '20' },
-                ]}
-              >
-                <Ionicons
-                  name={getStatusIcon(recentBooking.status)}
-                  size={16}
-                  color={getStatusColor(recentBooking.status)}
-                />
-                <Text
-                  style={[
-                    styles.statusText,
-                    { color: getStatusColor(recentBooking.status) },
-                  ]}
-                >
-                  {recentBooking.status}
-                </Text>
-              </View>
+              <Ionicons name="chevron-forward" size={20} color="#999" />
             </View>
 
-            <View style={styles.divider} />
-
-            <View style={styles.bookingDetails}>
-              {recentBooking.barberName && (
-                <View style={styles.detailRow}>
-                  <Ionicons name="person" size={18} color="#666" />
-                  <Text style={styles.detailText}>{recentBooking.barberName}</Text>
+            {(recentBooking.barberName || recentBooking.serviceName) && (
+              <>
+                <View style={styles.divider} />
+                <View style={styles.bookingDetails}>
+                  {recentBooking.barberName && (
+                    <View style={styles.detailRow}>
+                      <Ionicons name="person" size={18} color="#666" />
+                      <Text style={styles.detailText}>{recentBooking.barberName}</Text>
+                    </View>
+                  )}
+                  {recentBooking.serviceName && (
+                    <View style={styles.detailRow}>
+                      <Ionicons name="cut" size={18} color="#666" />
+                      <Text style={styles.detailText}>{recentBooking.serviceName}</Text>
+                    </View>
+                  )}
                 </View>
-              )}
-              {recentBooking.serviceName && (
-                <View style={styles.detailRow}>
-                  <Ionicons name="cut" size={18} color="#666" />
-                  <Text style={styles.detailText}>{recentBooking.serviceName}</Text>
-                </View>
-              )}
-            </View>
+              </>
+            )}
 
-            <View style={styles.cardFooter}>
-              <Ionicons name="chevron-forward" size={20} color="#6F4E37" />
-            </View>
+            {recentBooking.notes && (
+              <>
+                <View style={styles.divider} />
+                <View style={styles.notesContainer}>
+                  <Ionicons name="document-text-outline" size={16} color="#666" />
+                  <Text style={styles.notesText} numberOfLines={2}>
+                    {recentBooking.notes}
+                  </Text>
+                </View>
+              </>
+            )}
           </TouchableOpacity>
         ) : (
           <View style={styles.emptyState}>
@@ -240,8 +234,6 @@ export default function ClientHomeScreen() {
           <Text style={styles.bookButtonText}>Book Appointment</Text>
         </View>
       </TouchableOpacity>
-
-      
     </ScrollView>
   );
 }
@@ -342,10 +334,26 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
+  upcomingBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    backgroundColor: '#E8F5E9',
+    marginBottom: 12,
+    gap: 6,
+  },
+  upcomingBadgeText: {
+    fontSize: 12,
+    color: '#4CAF50',
+    fontWeight: '600',
+  },
   bookingHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     marginBottom: 16,
   },
   bookingDateContainer: {
@@ -367,19 +375,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
   },
-  statusBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-  },
-  statusText: {
-    fontSize: 12,
-    fontWeight: '600',
-    textTransform: 'capitalize',
-  },
   divider: {
     height: 1,
     backgroundColor: '#E0D5C7',
@@ -397,9 +392,19 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
   },
-  cardFooter: {
-    alignItems: 'flex-end',
-    marginTop: 12,
+  notesContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    backgroundColor: '#F5F5DC',
+    padding: 12,
+    borderRadius: 8,
+  },
+  notesText: {
+    flex: 1,
+    fontSize: 14,
+    color: '#666',
+    lineHeight: 20,
   },
   emptyState: {
     alignItems: 'center',
@@ -444,43 +449,5 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     color: '#F5F5DC',
-  },
-  quickActionsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 16,
-    marginTop: 16,
-  },
-  quickActionCard: {
-    flex: 1,
-    minWidth: '45%',
-    backgroundColor: '#FFF',
-    borderRadius: 16,
-    padding: 20,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#E0D5C7',
-    shadowColor: '#6F4E37',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  quickActionIcon: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: '#F5F5DC',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 12,
-    borderWidth: 2,
-    borderColor: '#6F4E37',
-  },
-  quickActionText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#6F4E37',
-    textAlign: 'center',
   },
 });

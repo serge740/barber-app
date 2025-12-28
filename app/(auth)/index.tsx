@@ -4,16 +4,14 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-
 export default function UserTypeSelectionScreen() {
   const [selectedType, setSelectedType] = useState<'client' | 'barber' | null>(null);
 
   const handleContinue = () => {
     if (selectedType) {
       console.log(`User selected: ${selectedType}`);
-      // Navigate based on selection
-      if (selectedType === 'client') router.push('/(auth)/client_login')
-      if (selectedType === 'barber') router.push('/(auth)/barber_login')
+      if (selectedType === 'client') router.push('/(auth)/client_login');
+      if (selectedType === 'barber') router.push('/(auth)/barber_login');
     }
   };
 
@@ -44,7 +42,7 @@ export default function UserTypeSelectionScreen() {
             activeOpacity={0.7}
           >
             <View style={styles.iconCircle}>
-              <Ionicons name="person" size={40} color="#fff" />
+              <Ionicons name="person" size={32} color="#fff" />
             </View>
             
             <View style={styles.cardContent}>
@@ -52,21 +50,6 @@ export default function UserTypeSelectionScreen() {
               <Text style={styles.cardDescription}>
                 Book appointments with talented barbers
               </Text>
-              
-              <View style={styles.featuresList}>
-                <View style={styles.featureItem}>
-                  <Ionicons name="checkmark-circle" size={16} color="#6F4E37" />
-                  <Text style={styles.featureText}>Browse barbers</Text>
-                </View>
-                <View style={styles.featureItem}>
-                  <Ionicons name="checkmark-circle" size={16} color="#6F4E37" />
-                  <Text style={styles.featureText}>Book appointments</Text>
-                </View>
-                <View style={styles.featureItem}>
-                  <Ionicons name="checkmark-circle" size={16} color="#6F4E37" />
-                  <Text style={styles.featureText}>Track bookings</Text>
-                </View>
-              </View>
             </View>
 
             {selectedType === 'client' && (
@@ -86,7 +69,7 @@ export default function UserTypeSelectionScreen() {
             activeOpacity={0.7}
           >
             <View style={styles.iconCircle}>
-              <MaterialCommunityIcons name="content-cut" size={40} color="#fff" />
+              <MaterialCommunityIcons name="content-cut" size={32} color="#fff" />
             </View>
             
             <View style={styles.cardContent}>
@@ -94,21 +77,6 @@ export default function UserTypeSelectionScreen() {
               <Text style={styles.cardDescription}>
                 Manage your schedule and grow your business
               </Text>
-              
-              <View style={styles.featuresList}>
-                <View style={styles.featureItem}>
-                  <Ionicons name="checkmark-circle" size={16} color="#6F4E37" />
-                  <Text style={styles.featureText}>Manage appointments</Text>
-                </View>
-                <View style={styles.featureItem}>
-                  <Ionicons name="checkmark-circle" size={16} color="#6F4E37" />
-                  <Text style={styles.featureText}>Track earnings</Text>
-                </View>
-                <View style={styles.featureItem}>
-                  <Ionicons name="checkmark-circle" size={16} color="#6F4E37" />
-                  <Text style={styles.featureText}>Build profile</Text>
-                </View>
-              </View>
             </View>
 
             {selectedType === 'barber' && (
@@ -168,7 +136,7 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   title: {
-    fontSize: 32,
+    fontSize: 27,
     fontWeight: 'bold',
     color: '#2C1810',
     marginBottom: 8,
@@ -187,7 +155,7 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: '#fff',
-    borderRadius: 20,
+    borderRadius: 16,
     padding: 20,
     borderWidth: 3,
     borderColor: 'transparent',
@@ -197,6 +165,9 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 4,
     position: 'relative',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
   },
   cardSelected: {
     borderColor: '#6F4E37',
@@ -206,48 +177,28 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   iconCircle: {
-    width: 70,
-    height: 70,
+    width: 60,
+    height: 60,
     backgroundColor: '#6F4E37',
-    borderRadius: 35,
+    borderRadius: 30,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 16,
-    alignSelf: 'center',
   },
   cardContent: {
-    alignItems: 'center',
+    flex: 1,
   },
   cardTitle: {
-    fontSize: 22,
+    fontSize: 18,
     fontWeight: 'bold',
     color: '#2C1810',
-    marginBottom: 8,
+    marginBottom: 4,
   },
   cardDescription: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#666',
-    textAlign: 'center',
-    marginBottom: 16,
-    lineHeight: 20,
-  },
-  featuresList: {
-    width: '100%',
-    gap: 8,
-  },
-  featureItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  featureText: {
-    fontSize: 14,
-    color: '#444',
+    lineHeight: 18,
   },
   checkmarkBadge: {
-    position: 'absolute',
-    top: 16,
-    right: 16,
     width: 32,
     height: 32,
     backgroundColor: '#6F4E37',
@@ -256,10 +207,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   buttonContainer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
+
     paddingHorizontal: 24,
     paddingVertical: 20,
     backgroundColor: '#F5F5DC',

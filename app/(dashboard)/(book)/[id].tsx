@@ -9,17 +9,25 @@ import {
   StatusBar,
   Alert,
   ActivityIndicator,
+  Linking,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useClientAuth } from '@/context/ClientAuthContext';
 import firestore from '@react-native-firebase/firestore';
 import { Booking } from '@/services/bookingService';
 
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string;
+}
+
 const BookingDetailsScreen = () => {
-  const { id:bookingId } = useLocalSearchParams() as any;
-  const { user } = useClientAuth();
+  const { id: bookingId } = useLocalSearchParams() as any;
   const [booking, setBooking] = useState<Booking | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -32,8 +40,24 @@ const BookingDetailsScreen = () => {
       const doc = await firestore().collection('bookings').doc(bookingId as string).get();
       
       if (doc.exists()) {
-        console.log(doc.data());
-        setBooking({ ...doc.data() as Booking, id: doc.id });
+        const bookingData = { ...doc.data() as Booking, id: doc.id };
+        setBooking(bookingData);
+
+        // Fetch user data
+        const userDoc = await firestore()
+          .collection('users')
+          .doc(bookingData.userId)
+          .get();
+        
+        if (userDoc.exists) {
+          const userData = userDoc.data();
+          setUser({
+            id: userDoc.id,
+            name: userData?.name || 'Unknown User',
+            email: userData?.email || '',
+            phone: userData?.phone || '',
+          });
+        }
       } else {
         Alert.alert('Error', 'Booking not found');
         router.back();
@@ -47,6 +71,79 @@ const BookingDetailsScreen = () => {
     }
   };
 
+  // Communication handlers
+  const handleCall = () => {
+    if (!user?.phone) {
+      Alert.alert('No Phone Number', `${user?.name || 'This client'} doesn't have a phone number on file.`);
+      return;
+    }
+
+    const phoneUrl = `tel:${user.phone}`;
+    Linking.canOpenURL(phoneUrl)
+      .then((supported) => {
+        if (supported) {
+          Linking.openURL(phoneUrl);
+        } else {
+          Alert.alert('Error', 'Unable to make phone calls on this device');
+        }
+      })
+      .catch((err) => {
+        console.error('Error opening phone app:', err);
+        Alert.alert('Error', 'Failed to open phone app');
+      });
+  };
+
+  const handleSMS = () => {
+    if (!user?.phone) {
+      Alert.alert('No Phone Number', `${user?.name || 'This client'} doesn't have a phone number on file.`);
+      return;
+    }
+
+    const smsUrl = Platform.OS === 'ios' 
+      ? `sms:${user.phone}` 
+      : `sms:${user.phone}`;
+    
+    Linking.canOpenURL(smsUrl)
+      .then((supported) => {
+        if (supported) {
+          Linking.openURL(smsUrl);
+        } else {
+          Alert.alert('Error', 'Unable to send SMS on this device');
+        }
+      })
+      .catch((err) => {
+        console.error('Error opening SMS app:', err);
+        Alert.alert('Error', 'Failed to open messaging app');
+      });
+  };
+
+  const handleEmail = () => {
+    if (!user?.email) {
+      Alert.alert('No Email', `${user?.name || 'This client'} doesn't have an email address on file.`);
+      return;
+    }
+
+    if (!booking) return;
+
+    const bookingDate = new Date(booking.bookingDate);
+    const subject = encodeURIComponent(`Regarding Your Appointment - ${formatDate(bookingDate)}`);
+    const body = encodeURIComponent(`Hi ${user.name},\n\n`);
+    const emailUrl = `mailto:${user.email}?subject=${subject}&body=${body}`;
+    
+    Linking.canOpenURL(emailUrl)
+      .then((supported) => {
+        if (supported) {
+          Linking.openURL(emailUrl);
+        } else {
+          Alert.alert('Error', 'Unable to send email on this device');
+        }
+      })
+      .catch((err) => {
+        console.error('Error opening email app:', err);
+        Alert.alert('Error', 'Failed to open email app');
+      });
+  };
+
   const formatFullDate = (timestamp: any) => {
     const date = new Date(timestamp);
     return date.toLocaleDateString('en-US', {
@@ -54,6 +151,15 @@ const BookingDetailsScreen = () => {
       month: 'long',
       day: 'numeric',
       year: 'numeric',
+    });
+  };
+
+  const formatDate = (date: Date) => {
+    return date.toLocaleDateString('en-US', {
+      weekday: 'short',
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
     });
   };
 
@@ -128,7 +234,7 @@ const BookingDetailsScreen = () => {
         {/* Countdown Card */}
         {upcoming && (
           <View style={styles.countdownCard}>
-            <Ionicons name="calendar-outline" size={32} color="#4CAF50" />
+            <Ionicons name="calendar-outline" size={32} color="#059669" />
             <View style={styles.countdownInfo}>
               <Text style={styles.countdownTitle}>Upcoming Appointment</Text>
               <Text style={styles.countdownText}>
@@ -211,6 +317,34 @@ const BookingDetailsScreen = () => {
           )}
         </View>
 
+        {/* Contact Actions Card */}
+        <View style={styles.detailCard}>
+          <Text style={styles.cardTitle}>Contact Client</Text>
+          
+          <View style={styles.contactActions}>
+            <TouchableOpacity style={styles.contactButton} onPress={handleCall}>
+              <View style={styles.contactButtonIcon}>
+                <Ionicons name="call" size={24} color="#FFFFFF" />
+              </View>
+              <Text style={styles.contactButtonText}>Call</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.contactButton} onPress={handleSMS}>
+              <View style={[styles.contactButtonIcon, { backgroundColor: '#6F4E37' }]}>
+                <Ionicons name="chatbubble" size={24} color="#FFFFFF" />
+              </View>
+              <Text style={styles.contactButtonText}>Message</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.contactButton} onPress={handleEmail}>
+              <View style={[styles.contactButtonIcon, { backgroundColor: '#6F4E37' }]}>
+                <Ionicons name="mail" size={24} color="#FFFFFF" />
+              </View>
+              <Text style={styles.contactButtonText}>Email</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
         {/* Notes Card */}
         {booking.notes && (
           <View style={styles.detailCard}>
@@ -226,16 +360,26 @@ const BookingDetailsScreen = () => {
         <View style={styles.detailCard}>
           <Text style={styles.cardTitle}>Booking Information</Text>
           
-         
+          <View style={styles.detailRow}>
+            <View style={styles.detailIconContainer}>
+              <Ionicons name="receipt-outline" size={24} color="#6F4E37" />
+            </View>
+            <View style={styles.detailContent}>
+              <Text style={styles.detailLabel}>Booking ID</Text>
+              <Text style={styles.detailValue}>{booking.id}</Text>
+            </View>
+          </View>
+
           {booking.createdAt && (
             <>
+              <View style={styles.divider} />
               <View style={styles.detailRow}>
                 <View style={styles.detailIconContainer}>
                   <Ionicons name="time-outline" size={24} color="#6F4E37" />
                 </View>
                 <View style={styles.detailContent}>
                   <Text style={styles.detailLabel}>Booked On</Text>
-                  <Text style={styles.detailValue}>{formatDateTime(booking.bookingDate)}</Text>
+                  <Text style={styles.detailValue}>{formatDateTime(booking.createdAt)}</Text>
                 </View>
               </View>
             </>
@@ -248,7 +392,7 @@ const BookingDetailsScreen = () => {
           <View style={styles.helpContent}>
             <Text style={styles.helpTitle}>Need Help?</Text>
             <Text style={styles.helpText}>
-              Contact us if you have any questions about your booking
+              Use the contact buttons above to communicate with the client
             </Text>
           </View>
         </View>
@@ -298,7 +442,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 16,
     fontSize: 16,
-    color: '#666',
+    color: '#6F4E37',
   },
   scrollView: {
     flex: 1,
@@ -328,13 +472,13 @@ const styles = StyleSheet.create({
   },
   countdownTitle: {
     fontSize: 16,
-    color: '#4CAF50',
+    color: '#059669',
     fontWeight: '600',
     marginBottom: 4,
   },
   countdownText: {
     fontSize: 20,
-    color: '#2E7D32',
+    color: '#047857',
     fontWeight: 'bold',
   },
   detailCard: {
@@ -374,7 +518,7 @@ const styles = StyleSheet.create({
   },
   detailLabel: {
     fontSize: 12,
-    color: '#999',
+    color: '#8B7355',
     marginBottom: 4,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
@@ -384,15 +528,38 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#333',
   },
-  detailValueSmall: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: '#666',
-  },
   divider: {
     height: 1,
     backgroundColor: '#E0D5C7',
     marginVertical: 16,
+  },
+  contactActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    gap: 12,
+  },
+  contactButton: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 8,
+  },
+  contactButtonIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#059669',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#6F4E37',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  contactButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#6F4E37',
   },
   notesBox: {
     flexDirection: 'row',
