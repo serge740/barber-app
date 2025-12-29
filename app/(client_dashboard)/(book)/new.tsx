@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -11,9 +11,10 @@ import {
   Alert,
   ActivityIndicator,
   Modal,
+  BackHandler,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { useClientAuth } from '@/context/ClientAuthContext';
 import { 
   createBooking, 
@@ -21,6 +22,7 @@ import {
   isTimeSlotAvailable 
 } from '@/services/bookingService';
 import type { User } from '@/services/clientAuthService';
+import SafestView from '@/components/ThemedView';
 
 // Custom DateTime Picker Component
 const CustomDateTimePicker: React.FC<{
@@ -232,6 +234,32 @@ const BookAppointmentScreen: React.FC = () => {
     });
   };
 
+  
+      
+    // Handle back button behavior
+    useFocusEffect(
+      useCallback(() => {
+        const onBackPress = () => {
+          // Check if we can go back in the navigation stack
+          if (router.canGoBack()) {
+            router.back();
+          } else {
+            // If we can't go back, navigate to dashboard instead of exiting the app
+            router.replace('/(client_dashboard)/(book)');
+          }
+          return true; // Prevent default back behavior
+        };
+  
+        // Add back handler when screen is focused
+        const subscription = BackHandler.addEventListener(
+          'hardwareBackPress',
+          onBackPress
+        );
+  
+        // Remove back handler when screen is unfocused
+        return () => subscription.remove();
+      }, [])
+    );
   const formatTime = (date: Date): string => {
     return date.toLocaleTimeString('en-US', {
       hour: '2-digit',
@@ -293,8 +321,10 @@ const BookAppointmentScreen: React.FC = () => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F5F5DC" />
+     <SafestView safe no_bottom >
+
+    <View style={styles.container}>
+        <StatusBar barStyle="light-content" backgroundColor="#6F4E37" />
 
       {/* Header */}
       <View style={styles.header}>
@@ -393,7 +423,7 @@ const BookAppointmentScreen: React.FC = () => {
           <View style={styles.quickNotesGrid}>
             {['First time visit', 'Trim only', 'Full service', 'Beard trim'].map((note) => (
               <TouchableOpacity
-                key={note}
+              key={note}
                 style={styles.quickNoteChip}
                 onPress={() => setNotes((prev) => (prev ? `${prev}, ${note}` : note))}
               >
@@ -434,7 +464,8 @@ const BookAppointmentScreen: React.FC = () => {
         onConfirm={handleDateTimeConfirm}
         initialDate={selectedDateTime}
       />
-    </SafeAreaView>
+    </View>
+</SafestView>
   );
 };
 

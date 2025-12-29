@@ -16,6 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import firestore from '@react-native-firebase/firestore';
 import { Booking } from '@/services/bookingService';
+import SafestView from '@/components/ThemedView';
 
 interface User {
   id: string;
@@ -49,7 +50,7 @@ const BookingDetailsScreen = () => {
           .doc(bookingData.userId)
           .get();
         
-        if (userDoc.exists) {
+        if (userDoc.exists()) {
           const userData = userDoc.data();
           setUser({
             id: userDoc.id,
@@ -124,8 +125,9 @@ const BookingDetailsScreen = () => {
     }
 
     if (!booking) return;
+    
 
-    const bookingDate = new Date(booking.bookingDate);
+    const bookingDate = new Date(booking.bookingDate as any) ;
     const subject = encodeURIComponent(`Regarding Your Appointment - ${formatDate(bookingDate)}`);
     const body = encodeURIComponent(`Hi ${user.name},\n\n`);
     const emailUrl = `mailto:${user.email}?subject=${subject}&body=${body}`;
@@ -196,13 +198,16 @@ const BookingDetailsScreen = () => {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
-        <StatusBar barStyle="dark-content" backgroundColor="#F5F5DC" />
+       <SafestView safe no_bottom >
+
+      <View style={styles.container}>
+        <StatusBar barStyle="light-content" backgroundColor="#6F4E37" />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#6F4E37" />
           <Text style={styles.loadingText}>Loading booking details...</Text>
         </View>
-      </SafeAreaView>
+      </View>
+       </SafestView>
     );
   }
 
@@ -214,9 +219,11 @@ const BookingDetailsScreen = () => {
   const daysUntil = getDaysUntil(booking.bookingDate);
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F5F5DC" />
+    <SafestView safe no_bottom >
 
+     <StatusBar barStyle="light-content" backgroundColor="#6F4E37" />
+    <View style={styles.container}>
+      
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
@@ -397,7 +404,8 @@ const BookingDetailsScreen = () => {
           </View>
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
+     </SafestView>
   );
 };
 

@@ -10,11 +10,13 @@ import {
     RefreshControl,
     Alert,
     ActivityIndicator,
+    BackHandler,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
 import { useClientAuth } from '@/context/ClientAuthContext';
 import { getBookingsByUser, Booking } from '@/services/bookingService';
+import SafestView from '@/components/ThemedView';
 
 type DateFilter = 'ALL' | 'TODAY' | 'WEEK' | 'MONTH' | 'YEAR';
 
@@ -24,6 +26,33 @@ const ClientBookingsScreen = () => {
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [dateFilter, setDateFilter] = useState<DateFilter>('ALL');
+
+
+    
+  // Handle back button behavior
+  useFocusEffect(
+    useCallback(() => {
+      const onBackPress = () => {
+        // Check if we can go back in the navigation stack
+        if (router.canGoBack()) {
+          router.back();
+        } else {
+          // If we can't go back, navigate to dashboard instead of exiting the app
+          router.replace('/(client_dashboard)');
+        }
+        return true; // Prevent default back behavior
+      };
+
+      // Add back handler when screen is focused
+      const subscription = BackHandler.addEventListener(
+        'hardwareBackPress',
+        onBackPress
+      );
+
+      // Remove back handler when screen is unfocused
+      return () => subscription.remove();
+    }, [])
+  );
 
     const fetchBookings = async () => {
         if (!user?.id) return;
@@ -191,8 +220,10 @@ const ClientBookingsScreen = () => {
     };
 
     return (
-        <SafeAreaView style={styles.container}>
-            <StatusBar barStyle="dark-content" backgroundColor="#F5F5DC" />
+         <SafestView safe no_bottom >
+
+        <View style={styles.container}>
+            <StatusBar barStyle="light-content" backgroundColor="#6F4E37" />
 
             {/* Header */}
             <View style={styles.header}>
@@ -228,7 +259,7 @@ const ClientBookingsScreen = () => {
                                     styles.filterTabText,
                                     dateFilter === filter.key && styles.filterTabTextActive,
                                 ]}
-                            >
+                                >
                                 {filter.label}
                             </Text>
                         </TouchableOpacity>
@@ -249,10 +280,10 @@ const ClientBookingsScreen = () => {
                     showsVerticalScrollIndicator={false}
                     refreshControl={
                         <RefreshControl
-                            refreshing={refreshing}
-                            onRefresh={onRefresh}
-                            tintColor="#6F4E37"
-                            colors={['#6F4E37']}
+                        refreshing={refreshing}
+                        onRefresh={onRefresh}
+                        tintColor="#6F4E37"
+                        colors={['#6F4E37']}
                         />
                     }
                 >
@@ -283,7 +314,8 @@ const ClientBookingsScreen = () => {
                     )}
                 </ScrollView>
             )}
-        </SafeAreaView>
+        </View>
+</SafestView>
     );
 };
 

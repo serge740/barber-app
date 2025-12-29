@@ -7,11 +7,15 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
+  Alert,
+  StatusBar,
 } from 'react-native';
 import { useClientAuth } from '@/context/ClientAuthContext';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
 import firestore from '@react-native-firebase/firestore';
+import { BackHandler } from 'react-native';
+import SafestView from '@/components/ThemedView';
 
 interface Booking {
   id: string;
@@ -27,6 +31,45 @@ export default function ClientHomeScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
+
+    useFocusEffect(
+      useCallback(() => {
+        const onBackPress = () => {
+          // Check if we can go back in the navigation stack
+          if (router.canGoBack()) {
+            router.back();
+          } else {
+            // If we can't go back, navigate to dashboard instead of exiting the app
+            Alert.alert(
+        'Exit App',
+        'Do you want to exit the app?',
+        [
+          {
+            text: 'Cancel',
+            onPress: () => null,
+            style: 'cancel',
+          },
+          {
+            text: 'Yes',
+            onPress: () => BackHandler.exitApp(),
+          },
+        ],
+        { cancelable: true }
+      );
+          }
+          return true; // Prevent default back behavior
+        };
+  
+        // Add back handler when screen is focused
+        const subscription = BackHandler.addEventListener(
+          'hardwareBackPress',
+          onBackPress
+        );
+  
+        // Remove back handler when screen is unfocused
+        return () => subscription.remove();
+      }, [])
+    );
   const fetchRecentBooking = async () => {
     setLoading(true);
     try {
@@ -111,6 +154,10 @@ export default function ClientHomeScreen() {
   };
 
   return (
+     <SafestView safe no_bottom >
+
+        <StatusBar barStyle="light-content" backgroundColor="#6F4E37" />
+     
     <ScrollView
       style={styles.container}
       contentContainerStyle={styles.contentContainer}
@@ -123,7 +170,7 @@ export default function ClientHomeScreen() {
         <View style={styles.bannerContent}>
           <Ionicons name="cut" size={40} color="#6F4E37" />
           <View style={styles.bannerTextContainer}>
-            <Text style={styles.bannerTitle}>QuickTrim</Text>
+            <Text style={styles.bannerTitle}>Gacuruzi Barber Shop</Text>
             <Text style={styles.bannerSubtitle}>Your Style, Your Time</Text>
           </View>
         </View>
@@ -235,6 +282,7 @@ export default function ClientHomeScreen() {
         </View>
       </TouchableOpacity>
     </ScrollView>
+        </SafestView>
   );
 }
 

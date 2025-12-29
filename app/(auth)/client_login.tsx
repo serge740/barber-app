@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   View,
   Text,
@@ -10,11 +10,14 @@ import {
   ScrollView,
   ActivityIndicator,
   Alert,
+  BackHandler,
 } from 'react-native';
 import { useClientAuth } from '@/context/ClientAuthContext';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import GuestOnly from '@/components/client_auth/GuestOnly'
+import { StatusBar } from 'react-native';
+import SafestView from '@/components/ThemedView';
 
 export default function ClientAuthScreen() {
   const { signIn, signUp } = useClientAuth();
@@ -30,6 +33,29 @@ export default function ClientAuthScreen() {
   
   const isLoginDisabled = !phone && !email || !password;
   const isSignUpDisabled = !name || !phone || !password;
+
+  
+        useFocusEffect(
+          useCallback(() => {
+            const onBackPress = () => {
+              // Check if we can go back in the navigation stack
+           
+                // If we can't go back, navigate to dashboard instead of exiting the app
+                router.replace('/(auth)')
+               
+              return true; // Prevent default back behavior
+            };
+      
+            // Add back handler when screen is focused
+            const subscription = BackHandler.addEventListener(
+              'hardwareBackPress',
+              onBackPress
+            );
+      
+            // Remove back handler when screen is unfocused
+            return () => subscription.remove();
+          }, [])
+        );
 
   const handleAuth = async () => {
     if (isLogin && isLoginDisabled) return;
@@ -67,11 +93,14 @@ export default function ClientAuthScreen() {
 
   return (
     <GuestOnly>
+<SafestView safe no_bottom >
 
+        <StatusBar barStyle="light-content" backgroundColor="#6F4E37" />
+    
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
+      >
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -175,7 +204,7 @@ export default function ClientAuthScreen() {
                 onChangeText={setPassword}
                 secureTextEntry={!showPassword}
                 autoCapitalize="none"
-              />
+                />
               <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
                 <Ionicons
                   name={showPassword ? 'eye-off-outline' : 'eye-outline'}
@@ -194,7 +223,7 @@ export default function ClientAuthScreen() {
             ]}
             onPress={handleAuth}
             disabled={(isLogin ? isLoginDisabled : isSignUpDisabled) || loading}
-          >
+            >
             {loading ? (
               <ActivityIndicator color="#F5F5DC" />
             ) : (
@@ -219,6 +248,7 @@ export default function ClientAuthScreen() {
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
+</SafestView>
 </GuestOnly>
   );
 }
@@ -226,7 +256,7 @@ export default function ClientAuthScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingTop: 24,
+
     backgroundColor: '#F5F5DC', // ✅ Beige background throughout
   },
   scrollContent: {

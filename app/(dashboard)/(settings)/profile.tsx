@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -13,12 +13,14 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  BackHandler,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 // import * as ImagePicker from 'expo-image-picker';
 
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
+import SafestView from '@/components/ThemedView';
 
 const EditProfileScreen: React.FC = () => {
   const { user, updateProfile } = useAuth();
@@ -29,6 +31,31 @@ const EditProfileScreen: React.FC = () => {
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
+  
+  // Handle back button behavior
+  useFocusEffect(
+    useCallback(() => {
+      const onBackPress = () => {
+        // Check if we can go back in the navigation stack
+        if (router.canGoBack()) {
+          router.back();
+        } else {
+          // If we can't go back, navigate to dashboard instead of exiting the app
+          router.replace('/(dashboard)');
+        }
+        return true; // Prevent default back behavior
+      };
+
+      // Add back handler when screen is focused
+      const subscription = BackHandler.addEventListener(
+        'hardwareBackPress',
+        onBackPress
+      );
+
+      // Remove back handler when screen is unfocused
+      return () => subscription.remove();
+    }, [])
+  );
 
   useEffect(() => {
     if (user) {
@@ -173,18 +200,24 @@ const EditProfileScreen: React.FC = () => {
 
   if (!user) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafestView safe no_bottom >
+
+      <View style={styles.container}>
+          <StatusBar barStyle="light-content" backgroundColor="#6F4E37" />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#6F4E37" />
           <Text style={styles.loadingText}>Loading...</Text>
         </View>
-      </SafeAreaView>
+      </View>
+      </SafestView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F5F5DC" />
+     <SafestView safe no_bottom >
+
+    <View style={styles.container}>
+        <StatusBar barStyle="light-content" backgroundColor="#6F4E37" />
       
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.keyboardView}>
         {/* Header */}
@@ -295,7 +328,7 @@ const EditProfileScreen: React.FC = () => {
                       name={user.providerData[0].providerId === 'google.com' ? 'logo-google' : 'mail'} 
                       size={14} 
                       color="#6F4E37" 
-                    />
+                      />
                     <Text style={styles.providerText}>
                       {user.providerData[0].providerId === 'google.com' ? 'Google' : 'Email'}
                     </Text>
@@ -321,7 +354,8 @@ const EditProfileScreen: React.FC = () => {
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
+</SafestView>
   );
 };
 

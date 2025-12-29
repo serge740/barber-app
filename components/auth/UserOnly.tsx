@@ -1,7 +1,8 @@
 import React, { useEffect } from "react";
-import { View, ActivityIndicator, StyleSheet } from "react-native";
+import { View, ActivityIndicator, StyleSheet, StatusBar } from "react-native";
 import { router } from "expo-router";
 import { useAuth } from "@/context/AuthContext";
+import SafestView from "../ThemedView";
 
 interface Props {
   children: React.ReactNode;
@@ -18,9 +19,13 @@ export default function UserOnly({ children }: Props) {
 
   if (loading || !isAuthenticated) {
     return (
-      <View style={styles.container}>
-        <ActivityIndicator size="large" color="#6F4E37" />
-      </View>
+  <SafestView safe no_bottom >
+  
+          <StatusBar barStyle="light-content" backgroundColor="#6F4E37" />
+        <View style={styles.container}>
+          <ActivityIndicator size="large" color="#6F4E37" />
+        </View>
+         </SafestView>
     );
   }
 

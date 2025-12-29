@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import firestore from '@react-native-firebase/firestore';
 import { getAllBookings, deleteBooking, Booking } from '@/services/bookingService';
+import SafestView from '@/components/ThemedView';
 
 interface User {
   id: string;
@@ -162,18 +163,23 @@ export default function UserDetails() {
 
   if (loadingUser) {
     return (
-      <SafeAreaView style={styles.container}>
-        <StatusBar barStyle="dark-content" backgroundColor="#F5F5DC" />
+       <SafestView safe no_bottom >
+
+      <View style={styles.container}>
+         <StatusBar barStyle="light-content" backgroundColor="#6F4E37" />
         <View style={styles.center}>
           <ActivityIndicator size="large" color="#6F4E37" />
         </View>
-      </SafeAreaView>
+      </View>
+       </SafestView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F5F5DC" />
+     <SafestView safe no_bottom >
+
+    <View style={styles.container}>
+       <StatusBar barStyle="light-content" backgroundColor="#6F4E37" />
 
       {/* Header */}
       <View style={styles.header}>
@@ -215,14 +221,15 @@ export default function UserDetails() {
         </View>
       ) : (
         <FlatList
-          data={bookings}
+        data={bookings}
           renderItem={renderBooking}
           keyExtractor={item => item.id}
           contentContainerStyle={{ padding: 16 }}
           showsVerticalScrollIndicator={false}
         />
       )}
-    </SafeAreaView>
+    </View>
+</SafestView>
   );
 }
 

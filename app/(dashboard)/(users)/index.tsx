@@ -12,10 +12,12 @@ import {
   SafeAreaView,
   StatusBar,
   Alert,
+  BackHandler,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import firestore from '@react-native-firebase/firestore';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
+import SafestView from '@/components/ThemedView';
 
 interface User {
   id: string;
@@ -31,6 +33,31 @@ export default function UsersList() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Handle back button behavior
+  useFocusEffect(
+    useCallback(() => {
+      const onBackPress = () => {
+        // Check if we can go back in the navigation stack
+        if (router.canGoBack()) {
+          router.back();
+        } else {
+          // If we can't go back, navigate to dashboard instead of exiting the app
+          router.replace('/(dashboard)');
+        }
+        return true; // Prevent default back behavior
+      };
+
+      // Add back handler when screen is focused
+      const subscription = BackHandler.addEventListener(
+        'hardwareBackPress',
+        onBackPress
+      );
+
+      // Remove back handler when screen is unfocused
+      return () => subscription.remove();
+    }, [])
+  );
 
   // Fetch all users from Firestore
   const fetchUsers = async () => {
@@ -104,7 +131,7 @@ export default function UsersList() {
           text: 'View',
           onPress: () => {
             // Example: navigate to dashboard with a user filter param
-            router.push( `/(dashboard)/(users)/${userId}`);
+            router.push(`/(dashboard)/(users)/${userId}`);
           },
         },
       ]
@@ -137,19 +164,24 @@ export default function UsersList() {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
-        <StatusBar barStyle="dark-content" backgroundColor="#F5F5DC" />
+       <SafestView safe no_bottom >
+
+      <View style={styles.container}>
+          <StatusBar barStyle="light-content" backgroundColor="#6F4E37" />
         <View style={styles.centerContainer}>
           <ActivityIndicator size="large" color="#6F4E37" />
           <Text style={styles.loadingText}>Loading users...</Text>
         </View>
-      </SafeAreaView>
+      </View>
+       </SafestView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F5F5DC" />
+ <SafestView safe no_bottom >
+
+    <View style={styles.container}>
+        <StatusBar barStyle="light-content" backgroundColor="#6F4E37" />
 
       {/* Header */}
       <View style={styles.header}>
@@ -168,7 +200,7 @@ export default function UsersList() {
           value={searchQuery}
           onChangeText={setSearchQuery}
           placeholderTextColor="#9CA3AF"
-        />
+          />
         {searchQuery.length > 0 && (
           <TouchableOpacity onPress={() => setSearchQuery('')}>
             <Ionicons name="close-circle" size={20} color="#6F4E37" />
@@ -200,7 +232,8 @@ export default function UsersList() {
           </View>
         }
       />
-    </SafeAreaView>
+    </View>
+</SafestView>
   );
 }
 

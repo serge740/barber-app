@@ -39,9 +39,19 @@ export default function DashboardLayout() {
           name="(book)"
           options={{
             title: 'Booking',
-             unmountOnBlur: false, // This is the crucial setting
+            //  unmountOnBlur: false, // This is the crucial setting
             tabBarIcon: ({ color, size }) => (
               <Ionicons name="receipt" size={size} color={color} />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="contact"
+          options={{
+            title: 'Contact',
+            //  unmountOnBlur: false, // This is the crucial setting
+            tabBarIcon: ({ color, size }) => (
+              <Ionicons name="phone-portrait" size={size} color={color} />
             ),
           }}
         />

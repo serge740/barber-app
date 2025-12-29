@@ -18,6 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { getAllBookings, deleteBooking, Booking } from '@/services/bookingService';
 import firestore from '@react-native-firebase/firestore';
+import SafestView from '@/components/ThemedView';
 
 interface User {
   id: string;
@@ -62,7 +63,7 @@ export default function BookingDashboard() {
               .doc(booking.userId)
               .get();
             
-            const userData = userDoc.exists ? userDoc.data() : null;
+            const userData = userDoc.exists() ? userDoc.data() : null;
             
             return {
               ...booking,
@@ -401,19 +402,24 @@ export default function BookingDashboard() {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
-        <StatusBar barStyle="dark-content" backgroundColor="#F5F5DC" />
+       <SafestView safe no_bottom >
+
+      <View style={styles.container}>
+        <StatusBar barStyle="light-content" backgroundColor="#6F4E37" />
         <View style={styles.centerContainer}>
           <ActivityIndicator size="large" color="#6F4E37" />
           <Text style={styles.loadingText}>Loading bookings...</Text>
         </View>
-      </SafeAreaView>
+      </View>
+       </SafestView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F5F5DC" />
+     <SafestView safe no_bottom >
+<StatusBar barStyle="light-content" backgroundColor="#6F4E37" />
+    <View style={styles.container}>
+     
       
       {/* Header */}
       <View style={styles.header}>
@@ -487,7 +493,8 @@ export default function BookingDashboard() {
           </View>
         }
       />
-    </SafeAreaView>
+    </View>
+  </SafestView>
   );
 }
 

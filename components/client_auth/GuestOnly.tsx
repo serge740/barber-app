@@ -3,6 +3,8 @@ import { View, ActivityIndicator, StyleSheet } from "react-native";
 import { router } from "expo-router";
 import { useAuth } from "@/context/AuthContext";
 import { useClientAuth } from "@/context/ClientAuthContext";
+import SafestView from "../ThemedView";
+import { StatusBar } from "react-native";
 
 
 interface Props {
@@ -20,9 +22,13 @@ export default function GuestOnly({ children }: Props) {
 
   if (loading) {
     return (
-      <View style={styles.container}>
-        <ActivityIndicator size="large" color="#6F4E37" />
-      </View>
+      <SafestView safe no_bottom >
+      
+              <StatusBar barStyle="light-content" backgroundColor="#6F4E37" />
+            <View style={styles.container}>
+              <ActivityIndicator size="large" color="#6F4E37" />
+            </View>
+             </SafestView>
     );
   }
 

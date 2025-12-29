@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -14,8 +14,10 @@ import {
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { useClientAuth } from '@/context/ClientAuthContext';
+import { BackHandler } from 'react-native';
+import SafestView from '@/components/ThemedView';
 
 const ClientProfileScreen: React.FC = () => {
   const { user, updateProfile, changePassword, signOut } = useClientAuth();
@@ -35,6 +37,31 @@ const ClientProfileScreen: React.FC = () => {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+    
+  // Handle back button behavior
+  useFocusEffect(
+    useCallback(() => {
+      const onBackPress = () => {
+        // Check if we can go back in the navigation stack
+        if (router.canGoBack()) {
+          router.back();
+        } else {
+          // If we can't go back, navigate to dashboard instead of exiting the app
+          router.replace('/(client_dashboard)/(settings)');
+        }
+        return true; // Prevent default back behavior
+      };
+
+      // Add back handler when screen is focused
+      const subscription = BackHandler.addEventListener(
+        'hardwareBackPress',
+        onBackPress
+      );
+
+      // Remove back handler when screen is unfocused
+      return () => subscription.remove();
+    }, [])
+  );
   useEffect(() => {
     if (user) {
       setName(user.name || '');
@@ -166,18 +193,26 @@ const ClientProfileScreen: React.FC = () => {
 
   if (!user) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#6F4E37" />
-          <Text style={styles.loadingText}>Loading...</Text>
-        </View>
-      </SafeAreaView>
+      <SafestView safe no_bottom >
+ 
+       <View style={styles.container}>
+           <StatusBar barStyle="light-content" backgroundColor="#6F4E37" />
+         <View style={styles.loadingContainer}>
+           <ActivityIndicator size="large" color="#6F4E37" />
+           <Text style={styles.loadingText}>Loading...</Text>
+         </View>
+       </View>
+       </SafestView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F5F5DC" />
+     <SafestView safe no_bottom >
+
+        <StatusBar barStyle="light-content" backgroundColor="#6F4E37" />
+     
+    <View style={styles.container}>
+      
       
       <KeyboardAvoidingView 
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
@@ -412,7 +447,8 @@ const ClientProfileScreen: React.FC = () => {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
+</SafestView>
   );
 };
 

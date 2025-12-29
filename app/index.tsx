@@ -9,10 +9,12 @@ import {
   NativeSyntheticEvent,
   NativeScrollEvent,
   ActivityIndicator,
+  StatusBar,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import SafestView from '@/components/ThemedView';
 
 const { width, height } = Dimensions.get('window');
 
@@ -120,14 +122,23 @@ export default function OnboardingScreen() {
   // Show loading screen while checking status
   if (isLoading) {
     return (
+        <SafestView safe  >
+            <StatusBar barStyle="light-content" backgroundColor="#6F4E37" />
+
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' }}>
         <ActivityIndicator size="large" color="#6F4E37" />
       </View>
+        </SafestView>
     );
   }
 
   return (
+
+     <SafestView safe  >
+
+    
     <View style={{ flex: 1, backgroundColor: '#fff' }}>
+        <StatusBar barStyle="light-content" backgroundColor="#6F4E37" />
       {/* Skip Button */}
       {currentIndex < onboardingData.length - 1 && (
         <TouchableOpacity
@@ -173,7 +184,7 @@ export default function OnboardingScreen() {
                 height: 150,
                 backgroundColor: 'transparent',
               }}
-            />
+              />
           </View>
         ))}
       </ScrollView>
@@ -224,7 +235,7 @@ export default function OnboardingScreen() {
             textAlign: 'center',
             marginBottom: 12,
           }}
-        >
+          >
           {onboardingData[currentIndex].title}
         </Text>
 
@@ -260,7 +271,7 @@ export default function OnboardingScreen() {
                 backgroundColor: currentIndex === index ? '#6F4E37' : '#D1D5DB',
                 marginHorizontal: 4,
               }}
-            />
+              />
           ))}
         </View>
 
@@ -291,7 +302,7 @@ export default function OnboardingScreen() {
           </TouchableOpacity>
         ) : (
           <TouchableOpacity
-            onPress={handleNext}
+          onPress={handleNext}
             style={{
               backgroundColor: '#6F4E37',
               paddingVertical: 16,
@@ -316,5 +327,6 @@ export default function OnboardingScreen() {
         )}
       </View>
     </View>
+              </SafestView>
   );
 }

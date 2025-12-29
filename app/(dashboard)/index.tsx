@@ -8,12 +8,16 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
+  BackHandler,
+  StatusBar,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '@/context/AuthContext';
 import { router, useFocusEffect } from 'expo-router';
 import firestore from '@react-native-firebase/firestore';
+import { Alert } from 'react-native';
+import SafestView from '@/components/ThemedView';
 
 interface Booking {
   id: string;
@@ -49,6 +53,47 @@ export default function BarberDashboard() {
   });
   const [todayBookings, setTodayBookings] = useState<(Booking & { userName: string })[]>([]);
   const [recentUsers, setRecentUsers] = useState<User[]>([]);
+
+  
+    // Handle back button behavior
+    useFocusEffect(
+      useCallback(() => {
+        const onBackPress = () => {
+          // Check if we can go back in the navigation stack
+          if (router.canGoBack()) {
+            router.back();
+          } else {
+            // If we can't go back, navigate to dashboard instead of exiting the app
+            Alert.alert(
+        'Exit App',
+        'Do you want to exit the app?',
+        [
+          {
+            text: 'Cancel',
+            onPress: () => null,
+            style: 'cancel',
+          },
+          {
+            text: 'Yes',
+            onPress: () => BackHandler.exitApp(),
+          },
+        ],
+        { cancelable: true }
+      );
+          }
+          return true; // Prevent default back behavior
+        };
+  
+        // Add back handler when screen is focused
+        const subscription = BackHandler.addEventListener(
+          'hardwareBackPress',
+          onBackPress
+        );
+  
+        // Remove back handler when screen is unfocused
+        return () => subscription.remove();
+      }, [])
+    );
 
   const fetchDashboardData = async () => {
     try {
@@ -186,17 +231,23 @@ export default function BarberDashboard() {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafestView safe no_bottom >
+
+<StatusBar barStyle="light-content" backgroundColor="#6F4E37" />
+      <View style={styles.container}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#6F4E37" />
           <Text style={styles.loadingText}>Loading dashboard...</Text>
         </View>
-      </SafeAreaView>
+      </View>
+      </SafestView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafestView safe no_bottom >
+<StatusBar barStyle="light-content" backgroundColor="#6F4E37" />
+    <View style={styles.container}>
       <ScrollView
         style={styles.scrollView}
         refreshControl={
@@ -327,7 +378,8 @@ export default function BarberDashboard() {
           </Pressable>
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
+</SafestView>
   );
 }
 

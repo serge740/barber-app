@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   View,
   Text,
@@ -11,11 +11,14 @@ import {
   ScrollView,
   ActivityIndicator,
   Alert,
+  BackHandler,
+  StatusBar,
 } from 'react-native';
 import { useAuth } from '@/context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import GuestOnly from '@/components/auth/GuestOnly';
+import SafestView from '@/components/ThemedView';
 
 export default function LoginScreen() {
   const { signIn } = useAuth();
@@ -25,6 +28,28 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
 
   const isButtonDisabled = !email || !password;
+
+      useFocusEffect(
+        useCallback(() => {
+          const onBackPress = () => {
+            // Check if we can go back in the navigation stack
+     
+              // If we can't go back, navigate to dashboard instead of exiting the app
+              router.replace('/(auth)')
+             
+            return true; // Prevent default back behavior
+          };
+    
+          // Add back handler when screen is focused
+          const subscription = BackHandler.addEventListener(
+            'hardwareBackPress',
+            onBackPress
+          );
+    
+          // Remove back handler when screen is unfocused
+          return () => subscription.remove();
+        }, [])
+      );
 
   const handleSignIn = async () => {
     if (isButtonDisabled) return;
@@ -45,6 +70,10 @@ export default function LoginScreen() {
 
   return (
     <GuestOnly>
+      <SafestView safe no_bottom={true} >
+      
+              <StatusBar barStyle="light-content" backgroundColor="#6F4E37" />
+            
 
     <KeyboardAvoidingView
       style={styles.container}
@@ -106,7 +135,7 @@ export default function LoginScreen() {
               keyboardType="email-address"
               autoCapitalize="none"
               autoComplete="email"
-            />
+              />
           </View>
 
           {/* Password Input */}
@@ -135,7 +164,7 @@ export default function LoginScreen() {
             style={[styles.button, isButtonDisabled && styles.buttonDisabled]}
             onPress={handleSignIn}
             disabled={isButtonDisabled || loading}
-          >
+            >
             {loading ? (
               <ActivityIndicator color="#F5F5DC" />
             ) : (
@@ -147,6 +176,7 @@ export default function LoginScreen() {
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
+</SafestView>
 </GuestOnly>
   );
 }
@@ -218,8 +248,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#FFF',
     borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
     marginBottom: 16,
     borderWidth: 1,
     borderColor: '#E0E0E0',

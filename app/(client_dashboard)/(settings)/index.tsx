@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   View,
   Text,
@@ -9,12 +9,15 @@ import {
   StatusBar,
   Alert,
   Switch,
+  BackHandler,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { router } from 'expo-router';
 ;
 import { useClientAuth } from '@/context/ClientAuthContext';
+import { useFocusEffect } from 'expo-router';
+import SafestView from '@/components/ThemedView';
 
 const SettingsScreen: React.FC = () => {
   const { user, signOut } = useClientAuth();
@@ -22,6 +25,33 @@ const SettingsScreen: React.FC = () => {
   const [pushNotifications, setPushNotifications] = useState(true);
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [darkMode, setDarkMode] = useState(false);
+
+  
+      
+    // Handle back button behavior
+    useFocusEffect(
+      useCallback(() => {
+        const onBackPress = () => {
+          // Check if we can go back in the navigation stack
+          if (router.canGoBack()) {
+            router.back();
+          } else {
+            // If we can't go back, navigate to dashboard instead of exiting the app
+            router.replace('/(client_dashboard)');
+          }
+          return true; // Prevent default back behavior
+        };
+  
+        // Add back handler when screen is focused
+        const subscription = BackHandler.addEventListener(
+          'hardwareBackPress',
+          onBackPress
+        );
+  
+        // Remove back handler when screen is unfocused
+        return () => subscription.remove();
+      }, [])
+    );
 
   const handleLogout = () => {
     Alert.alert(
@@ -127,8 +157,12 @@ const SettingsScreen: React.FC = () => {
   );
 
   return (
+    <SafestView safe no_bottom >
+
+        <StatusBar barStyle="light-content" backgroundColor="#6F4E37" />
+     
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F5F5DC" />
+   
       
       {/* Header */}
       <View style={styles.header}>
@@ -163,7 +197,7 @@ const SettingsScreen: React.FC = () => {
               title="Privacy & Security"
               subtitle="Manage your privacy settings"
               onPress={() => Alert.alert('Privacy', 'Privacy settings coming soon')}
-            />
+              />
           </View>
         </View>
 
@@ -264,6 +298,7 @@ const SettingsScreen: React.FC = () => {
         </View>
       </ScrollView>
     </SafeAreaView>
+</SafestView>
   );
 };
 

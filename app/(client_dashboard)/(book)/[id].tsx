@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -9,12 +9,14 @@ import {
   StatusBar,
   Alert,
   ActivityIndicator,
+  BackHandler,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useClientAuth } from '@/context/ClientAuthContext';
 import firestore from '@react-native-firebase/firestore';
 import { Booking } from '@/services/bookingService';
+import SafestView from '@/components/ThemedView';
 
 const BookingDetailsScreen = () => {
   const { id:bookingId } = useLocalSearchParams() as any;
@@ -22,6 +24,32 @@ const BookingDetailsScreen = () => {
   const [booking, setBooking] = useState<Booking | null>(null);
   const [loading, setLoading] = useState(true);
 
+  
+      
+    // Handle back button behavior
+    useFocusEffect(
+      useCallback(() => {
+        const onBackPress = () => {
+          // Check if we can go back in the navigation stack
+          if (router.canGoBack()) {
+            router.back();
+          } else {
+            // If we can't go back, navigate to dashboard instead of exiting the app
+            router.replace('/(client_dashboard)/(book)');
+          }
+          return true; // Prevent default back behavior
+        };
+  
+        // Add back handler when screen is focused
+        const subscription = BackHandler.addEventListener(
+          'hardwareBackPress',
+          onBackPress
+        );
+  
+        // Remove back handler when screen is unfocused
+        return () => subscription.remove();
+      }, [])
+    );
   useEffect(() => {
     fetchBookingDetails();
   }, [bookingId]);
@@ -90,13 +118,16 @@ const BookingDetailsScreen = () => {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
+       <SafestView safe no_bottom >
+  <StatusBar barStyle="light-content" backgroundColor="#6F4E37" />
+      <View style={styles.container}>
         <StatusBar barStyle="dark-content" backgroundColor="#F5F5DC" />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#6F4E37" />
           <Text style={styles.loadingText}>Loading booking details...</Text>
         </View>
-      </SafeAreaView>
+      </View>
+       </SafestView>
     );
   }
 
@@ -108,8 +139,12 @@ const BookingDetailsScreen = () => {
   const daysUntil = getDaysUntil(booking.bookingDate);
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F5F5DC" />
+    <SafestView safe no_bottom >
+
+        <StatusBar barStyle="light-content" backgroundColor="#6F4E37" />
+      
+    <View style={styles.container}>
+     
 
       {/* Header */}
       <View style={styles.header}>
@@ -253,7 +288,8 @@ const BookingDetailsScreen = () => {
           </View>
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
+</SafestView>
   );
 };
 

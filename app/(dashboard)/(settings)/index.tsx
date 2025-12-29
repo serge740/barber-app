@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   View,
   Text,
@@ -14,6 +14,9 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { router } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
+import { useFocusEffect } from 'expo-router';
+import { BackHandler } from 'react-native';
+import SafestView from '@/components/ThemedView';
 
 const SettingsScreen: React.FC = () => {
   const { user, signOut } = useAuth();
@@ -21,6 +24,32 @@ const SettingsScreen: React.FC = () => {
   const [pushNotifications, setPushNotifications] = useState(true);
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [darkMode, setDarkMode] = useState(false);
+
+  
+  // Handle back button behavior
+  useFocusEffect(
+    useCallback(() => {
+      const onBackPress = () => {
+        // Check if we can go back in the navigation stack
+        if (router.canGoBack()) {
+          router.back();
+        } else {
+          // If we can't go back, navigate to dashboard instead of exiting the app
+          router.replace('/(dashboard)');
+        }
+        return true; // Prevent default back behavior
+      };
+
+      // Add back handler when screen is focused
+      const subscription = BackHandler.addEventListener(
+        'hardwareBackPress',
+        onBackPress
+      );
+
+      // Remove back handler when screen is unfocused
+      return () => subscription.remove();
+    }, [])
+  );
 
   const handleLogout = () => {
     Alert.alert(
@@ -126,8 +155,10 @@ const SettingsScreen: React.FC = () => {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F5F5DC" />
+     <SafestView safe no_bottom >
+
+    <View style={styles.container}>
+        <StatusBar barStyle="light-content" backgroundColor="#6F4E37" />
       
       {/* Header */}
       <View style={styles.header}>
@@ -216,7 +247,7 @@ const SettingsScreen: React.FC = () => {
               title="Help Center"
               subtitle="Get help and support"
               onPress={() => Alert.alert('Help', 'Help center coming soon')}
-            />
+              />
             <SettingItem
               icon="document-text-outline"
               title="Terms of Service"
@@ -246,7 +277,7 @@ const SettingsScreen: React.FC = () => {
               subtitle={`Signed in as ${user?.email || 'User'}`}
               onPress={handleLogout}
               showArrow={false}
-            />
+              />
             <SettingItem
               icon="trash-outline"
               title="Delete Account"
@@ -262,7 +293,8 @@ const SettingsScreen: React.FC = () => {
           <Text style={styles.footerText}>Made with ❤️ for you</Text>
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
+              </SafestView>
   );
 };
 

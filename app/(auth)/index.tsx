@@ -1,11 +1,46 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import React, { useCallback, useState } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, BackHandler, Alert, StatusBar } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { router } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { router, useFocusEffect } from 'expo-router';
+import SafestView from '@/components/ThemedView';
 
 export default function UserTypeSelectionScreen() {
   const [selectedType, setSelectedType] = useState<'client' | 'barber' | null>(null);
+  
+  useFocusEffect(
+    useCallback(() => {
+      const onBackPress = () => {
+        if (router.canGoBack()) {
+          router.back();
+        } else {
+          Alert.alert(
+            'Exit App',
+            'Do you want to exit the app?',
+            [
+              {
+                text: 'Cancel',
+                onPress: () => null,
+                style: 'cancel',
+              },
+              {
+                text: 'Yes',
+                onPress: () => BackHandler.exitApp(),
+              },
+            ],
+            { cancelable: true }
+          );
+        }
+        return true;
+      };
+
+      const subscription = BackHandler.addEventListener(
+        'hardwareBackPress',
+        onBackPress
+      );
+
+      return () => subscription.remove();
+    }, [])
+  );
 
   const handleContinue = () => {
     if (selectedType) {
@@ -16,93 +51,100 @@ export default function UserTypeSelectionScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView 
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.logoContainer}>
-            <Ionicons name="cut" size={50} color="#6F4E37" />
-          </View>
-          <Text style={styles.title}>Welcome to BarberBook</Text>
-          <Text style={styles.subtitle}>Choose how you want to continue</Text>
-        </View>
+    <SafestView safe>
+      <StatusBar barStyle="light-content" backgroundColor="#6F4E37" />
 
-        {/* Selection Cards */}
-        <View style={styles.cardsContainer}>
-          {/* Client Card */}
-          <TouchableOpacity
-            style={[
-              styles.card,
-              selectedType === 'client' && styles.cardSelected,
-            ]}
-            onPress={() => setSelectedType('client')}
-            activeOpacity={0.7}
-          >
-            <View style={styles.iconCircle}>
-              <Ionicons name="person" size={32} color="#fff" />
-            </View>
-            
-            <View style={styles.cardContent}>
-              <Text style={styles.cardTitle}>I'm a Client</Text>
-              <Text style={styles.cardDescription}>
-                Book appointments with talented barbers
-              </Text>
-            </View>
-
-            {selectedType === 'client' && (
-              <View style={styles.checkmarkBadge}>
-                <Ionicons name="checkmark" size={20} color="#fff" />
-              </View>
-            )}
-          </TouchableOpacity>
-
-          {/* Barber Card */}
-          <TouchableOpacity
-            style={[
-              styles.card,
-              selectedType === 'barber' && styles.cardSelected,
-            ]}
-            onPress={() => setSelectedType('barber')}
-            activeOpacity={0.7}
-          >
-            <View style={styles.iconCircle}>
-              <MaterialCommunityIcons name="content-cut" size={32} color="#fff" />
-            </View>
-            
-            <View style={styles.cardContent}>
-              <Text style={styles.cardTitle}>I'm a Barber</Text>
-              <Text style={styles.cardDescription}>
-                Manage your schedule and grow your business
-              </Text>
-            </View>
-
-            {selectedType === 'barber' && (
-              <View style={styles.checkmarkBadge}>
-                <Ionicons name="checkmark" size={20} color="#fff" />
-              </View>
-            )}
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
-
-      {/* Continue Button */}
-      <View style={styles.buttonContainer}>
-        <TouchableOpacity
-          style={[
-            styles.continueButton,
-            !selectedType && styles.continueButtonDisabled,
-          ]}
-          onPress={handleContinue}
-          disabled={!selectedType}
+      <View style={styles.container}>
+        <ScrollView 
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
         >
-          <Text style={styles.continueButtonText}>Continue</Text>
-          <Ionicons name="arrow-forward" size={20} color="#fff" />
-        </TouchableOpacity>
+          {/* Header */}
+          <View style={styles.header}>
+            <View style={styles.logoContainer}>
+              <Ionicons name="cut" size={50} color="#6F4E37" />
+            </View>
+            <Text style={styles.title}>Gacuruzi Barber Shop</Text>
+            <Text style={styles.subtitle}>1039 Bemis St SE, Grand Rapids, MI</Text>
+            <Text style={styles.subtitle}>+1 (315) 450-4113</Text>
+          </View>
+
+          {/* Selection Cards */}
+          <View style={styles.cardsContainer}>
+            {/* Client Card */}
+            <TouchableOpacity
+              style={[
+                styles.card,
+                selectedType === 'client' && styles.cardSelected,
+              ]}
+              onPress={() => setSelectedType('client')}
+              activeOpacity={0.7}
+            >
+              <View style={styles.iconCircle}>
+                <Ionicons name="person" size={32} color="#fff" />
+              </View>
+              
+              <View style={styles.cardContent}>
+                <Text style={styles.cardTitle}>I'm a Client</Text>
+                <Text style={styles.cardDescription}>
+                  Book appointments with talented barbers
+                </Text>
+              </View>
+
+              {selectedType === 'client' && (
+                <View style={styles.checkmarkBadge}>
+                  <Ionicons name="checkmark" size={20} color="#fff" />
+                </View>
+              )}
+            </TouchableOpacity>
+
+            {/* Barber Card */}
+            <TouchableOpacity
+              style={[
+                styles.card,
+                selectedType === 'barber' && styles.cardSelected,
+              ]}
+              onPress={() => setSelectedType('barber')}
+              activeOpacity={0.7}
+            >
+              <View style={styles.iconCircle}>
+                <MaterialCommunityIcons name="content-cut" size={32} color="#fff" />
+              </View>
+              
+              <View style={styles.cardContent}>
+                <Text style={styles.cardTitle}>I'm a Barber</Text>
+                <Text style={styles.cardDescription}>
+                  Manage your schedule and grow your business
+                </Text>
+              </View>
+
+              {selectedType === 'barber' && (
+                <View style={styles.checkmarkBadge}>
+                  <Ionicons name="checkmark" size={20} color="#fff" />
+                </View>
+              )}
+            </TouchableOpacity>
+          </View>
+
+
+        </ScrollView>
+
+        {/* Continue Button */}
+        <View style={styles.buttonContainer}>
+          <TouchableOpacity
+            style={[
+              styles.continueButton,
+              !selectedType && styles.continueButtonDisabled,
+            ]}
+            onPress={handleContinue}
+            disabled={!selectedType}
+          >
+            <Text style={styles.continueButtonText}>Continue</Text>
+            <Ionicons name="arrow-forward" size={20} color="#fff" />
+          </TouchableOpacity>
+        </View>
       </View>
-    </SafeAreaView>
+    </SafestView>
   );
 }
 
@@ -110,6 +152,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F5F5DC',
+    padding: 10,
   },
   scrollContent: {
     flexGrow: 1,
@@ -117,8 +160,8 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    paddingTop: 60,
-    paddingBottom: 40,
+    paddingTop: 40,
+    paddingBottom: 30,
     paddingHorizontal: 24,
   },
   logoContainer: {
@@ -148,10 +191,9 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   cardsContainer: {
-    flex: 1,
     paddingHorizontal: 24,
-    justifyContent: 'center',
     gap: 16,
+    marginBottom: 24,
   },
   card: {
     backgroundColor: '#fff',
@@ -206,8 +248,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  buttonContainer: {
 
+  buttonContainer: {
     paddingHorizontal: 24,
     paddingVertical: 20,
     backgroundColor: '#F5F5DC',
