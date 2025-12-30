@@ -227,7 +227,7 @@ export const getAllBookings = async (): Promise<Booking[]> => {
  */
 export const updateBooking = async (
   bookingId: string,
-  { bookingDate, notes }: { bookingDate?: any; notes?: string }
+  { bookingDate, notes,payment,status }: {status:string ,payment?:any ; bookingDate?: any; notes?: string }
 ): Promise<{
   success: boolean;
   booking?: Booking;
@@ -261,6 +261,9 @@ export const updateBooking = async (
   }
 
   if (notes !== undefined) updates.notes = notes;
+  if (payment !== undefined) updates.payment = payment;
+  if (status !== undefined) updates.status = status;
+  
 
   await bookingsCollection.doc(bookingId).update(updates);
   const updatedDoc = await bookingsCollection.doc(bookingId).get();

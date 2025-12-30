@@ -271,17 +271,7 @@ export default function BarberDashboard() {
             )}
           </View>
 
-          {/* Quick Actions */}
-          <View style={styles.quickActions}>
-            <Text style={styles.sectionTitle}>Quick Actions</Text>
-            <Pressable
-              style={[styles.actionButton, { backgroundColor: '#6F4E37' }]}
-              onPress={() => router.push('/(dashboard)/(book)')}
-            >
-              <Ionicons name="calendar" size={20} color="white" />
-              <Text style={styles.actionButtonText}>View All Bookings</Text>
-            </Pressable>
-          </View>
+        
         </ScrollView>
       </View>
     </SafestView>

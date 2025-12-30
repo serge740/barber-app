@@ -35,6 +35,7 @@ const CustomDateTimePicker: React.FC<{
   const [availableSlots, setAvailableSlots] = useState<Date[]>([]);
   const [loading, setLoading] = useState(false);
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
+  
 
   const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   const months = [
@@ -224,6 +225,17 @@ const BookAppointmentScreen: React.FC = () => {
   const [notes, setNotes] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
   const [showCustomPicker, setShowCustomPicker] = useState<boolean>(false);
+  const [selectedHaircuts, setSelectedHaircuts] = useState<string[]>([]);
+  
+  const haircuts = [
+    'Children',
+    'Women',
+    'Full haircut',
+    'Fade',
+    'Trim only',
+    'Beard trim',
+    'Line up'
+  ];
 
   const formatDate = (date: Date): string => {
     return date.toLocaleDateString('en-US', {
@@ -234,32 +246,44 @@ const BookAppointmentScreen: React.FC = () => {
     });
   };
 
-  
+  // Handle haircut selection
+  const handleHaircutSelect = (haircut: string) => {
+    if (selectedHaircuts.includes(haircut)) {
+      // Remove if already selected
+      setSelectedHaircuts(selectedHaircuts.filter(h => h !== haircut));
+      setNotes(notes.split(', ').filter(n => n !== haircut).join(', '));
+    } else {
+      // Add if not selected
+      setSelectedHaircuts([...selectedHaircuts, haircut]);
+      setNotes(prev => (prev ? `${prev}, ${haircut}` : haircut));
+    }
+  };
       
-    // Handle back button behavior
-    useFocusEffect(
-      useCallback(() => {
-        const onBackPress = () => {
-          // Check if we can go back in the navigation stack
-          if (router.canGoBack()) {
-            router.back();
-          } else {
-            // If we can't go back, navigate to dashboard instead of exiting the app
-            router.replace('/(client_dashboard)/(book)');
-          }
-          return true; // Prevent default back behavior
-        };
+  // Handle back button behavior
+  useFocusEffect(
+    useCallback(() => {
+      const onBackPress = () => {
+        // Check if we can go back in the navigation stack
+        if (router.canGoBack()) {
+          router.back();
+        } else {
+          // If we can't go back, navigate to dashboard instead of exiting the app
+          router.replace('/(client_dashboard)/(book)');
+        }
+        return true; // Prevent default back behavior
+      };
+
+      // Add back handler when screen is focused
+      const subscription = BackHandler.addEventListener(
+        'hardwareBackPress',
+        onBackPress
+      );
+
+      // Remove back handler when screen is unfocused
+      return () => subscription.remove();
+    }, [])
+  );
   
-        // Add back handler when screen is focused
-        const subscription = BackHandler.addEventListener(
-          'hardwareBackPress',
-          onBackPress
-        );
-  
-        // Remove back handler when screen is unfocused
-        return () => subscription.remove();
-      }, [])
-    );
   const formatTime = (date: Date): string => {
     return date.toLocaleTimeString('en-US', {
       hour: '2-digit',
@@ -313,6 +337,7 @@ const BookAppointmentScreen: React.FC = () => {
           Alert.alert('Error', result.error || 'No available slots found in the next 30 days');
         }
       }
+      
     } catch (error: any) {
       Alert.alert('Error', error?.message || 'Failed to book appointment');
     } finally {
@@ -321,151 +346,165 @@ const BookAppointmentScreen: React.FC = () => {
   };
 
   return (
-     <SafestView safe no_bottom >
-
-    <View style={styles.container}>
+    <SafestView safe no_bottom>
+      <View style={styles.container}>
         <StatusBar barStyle="light-content" backgroundColor="#6F4E37" />
 
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#6F4E37" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Book Appointment</Text>
-        <View style={styles.placeholder} />
-      </View>
-
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Info Banner */}
-        <View style={styles.infoBanner}>
-          <Ionicons name="information-circle" size={24} color="#6F4E37" />
-          <View style={styles.infoBannerTextContainer}>
-            <Text style={styles.infoBannerText}>
-              Select your preferred date and time. Bookings are available from 9:00 AM to 6:00 PM.
-            </Text>
-            <Text style={styles.infoBannerSubtext}>
-              Each appointment requires a 40-minute interval.
-            </Text>
-          </View>
-        </View>
-
-        {/* DateTime Selection */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Select Date & Time</Text>
-          <TouchableOpacity
-            style={styles.dateTimeCard}
-            onPress={() => setShowCustomPicker(true)}
-          >
-            <View style={styles.dateTimeIconContainer}>
-              <Ionicons name="calendar" size={28} color="#6F4E37" />
-            </View>
-            <View style={styles.dateTimeInfo}>
-              <Text style={styles.dateTimeLabel}>Appointment Date & Time</Text>
-              <Text style={styles.dateTimeValue}>{formatDate(selectedDateTime)}</Text>
-              <Text style={styles.dateTimeValue}>{formatTime(selectedDateTime)}</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={24} color="#6F4E37" />
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={24} color="#6F4E37" />
           </TouchableOpacity>
+          <Text style={styles.headerTitle}>Book Appointment</Text>
+          <View style={styles.placeholder} />
         </View>
 
-        {/* Summary Card */}
-        <View style={styles.summaryCard}>
-          <Text style={styles.summaryTitle}>Appointment Summary</Text>
-          <View style={styles.summaryRow}>
-            <Ionicons name="person" size={20} color="#666" />
-            <Text style={styles.summaryLabel}>Client:</Text>
-            <Text style={styles.summaryValue}>{user?.name || 'Guest'}</Text>
-          </View>
-          <View style={styles.summaryRow}>
-            <Ionicons name="calendar" size={20} color="#666" />
-            <Text style={styles.summaryLabel}>Date:</Text>
-            <Text style={styles.summaryValue}>
-              {selectedDateTime.toLocaleDateString('en-US', {
-                month: 'short',
-                day: 'numeric',
-                year: 'numeric',
-              })}
-            </Text>
-          </View>
-          <View style={styles.summaryRow}>
-            <Ionicons name="time" size={20} color="#666" />
-            <Text style={styles.summaryLabel}>Time:</Text>
-            <Text style={styles.summaryValue}>{formatTime(selectedDateTime)}</Text>
-          </View>
-        </View>
-
-        {/* Notes Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Additional Notes (Optional)</Text>
-          <View style={styles.notesContainer}>
-            <TextInput
-              style={styles.notesInput}
-              value={notes}
-              onChangeText={setNotes}
-              placeholder="Add any special requests or notes for your appointment..."
-              placeholderTextColor="#999"
-              multiline
-              numberOfLines={4}
-              textAlignVertical="top"
-              maxLength={500}
-            />
-            <Text style={styles.characterCount}>{notes.length}/500</Text>
-          </View>
-        </View>
-
-        {/* Quick Notes */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Quick Notes</Text>
-          <View style={styles.quickNotesGrid}>
-            {['First time visit', 'Trim only', 'Full service', 'Beard trim'].map((note) => (
-              <TouchableOpacity
-              key={note}
-                style={styles.quickNoteChip}
-                onPress={() => setNotes((prev) => (prev ? `${prev}, ${note}` : note))}
-              >
-                <Ionicons name="add-circle-outline" size={16} color="#6F4E37" />
-                <Text style={styles.quickNoteText}>{note}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
-        {/* Book Button */}
-        <TouchableOpacity
-          style={[styles.bookButton, loading && styles.bookButtonDisabled]}
-          onPress={handleBookAppointment}
-          disabled={loading}
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
         >
-          {loading ? (
-            <ActivityIndicator color="#F5F5DC" />
-          ) : (
-            <>
-              <Ionicons name="checkmark-circle" size={24} color="#F5F5DC" />
-              <Text style={styles.bookButtonText}>Confirm Booking</Text>
-            </>
-          )}
-        </TouchableOpacity>
+          {/* Info Banner */}
+          <View style={styles.infoBanner}>
+            <Ionicons name="information-circle" size={24} color="#6F4E37" />
+            <View style={styles.infoBannerTextContainer}>
+              <Text style={styles.infoBannerText}>
+                Select your preferred date and time. Bookings are available from 9:00 AM to 6:00 PM.
+              </Text>
+              <Text style={styles.infoBannerSubtext}>
+                Each appointment requires a 40-minute interval.
+              </Text>
+            </View>
+          </View>
 
-        {/* Terms */}
-        <Text style={styles.termsText}>
-          By booking, you agree to our cancellation policy. Please arrive 5 minutes before your
-          appointment.
-        </Text>
-      </ScrollView>
+          {/* DateTime Selection */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Select Date & Time</Text>
+            <TouchableOpacity
+              style={styles.dateTimeCard}
+              onPress={() => setShowCustomPicker(true)}
+            >
+              <View style={styles.dateTimeIconContainer}>
+                <Ionicons name="calendar" size={28} color="#6F4E37" />
+              </View>
+              <View style={styles.dateTimeInfo}>
+                <Text style={styles.dateTimeLabel}>Appointment Date & Time</Text>
+                <Text style={styles.dateTimeValue}>{formatDate(selectedDateTime)}</Text>
+                <Text style={styles.dateTimeValue}>{formatTime(selectedDateTime)}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={24} color="#6F4E37" />
+            </TouchableOpacity>
+          </View>
 
-      {/* Custom DateTime Picker Modal */}
-      <CustomDateTimePicker
-        visible={showCustomPicker}
-        onClose={() => setShowCustomPicker(false)}
-        onConfirm={handleDateTimeConfirm}
-        initialDate={selectedDateTime}
-      />
-    </View>
-</SafestView>
+          {/* Summary Card */}
+          <View style={styles.summaryCard}>
+            <Text style={styles.summaryTitle}>Appointment Summary</Text>
+            <View style={styles.summaryRow}>
+              <Ionicons name="person" size={20} color="#666" />
+              <Text style={styles.summaryLabel}>Client:</Text>
+              <Text style={styles.summaryValue}>{user?.name || 'Guest'}</Text>
+            </View>
+            <View style={styles.summaryRow}>
+              <Ionicons name="calendar" size={20} color="#666" />
+              <Text style={styles.summaryLabel}>Date:</Text>
+              <Text style={styles.summaryValue}>
+                {selectedDateTime.toLocaleDateString('en-US', {
+                  month: 'short',
+                  day: 'numeric',
+                  year: 'numeric',
+                })}
+              </Text>
+            </View>
+            <View style={styles.summaryRow}>
+              <Ionicons name="time" size={20} color="#666" />
+              <Text style={styles.summaryLabel}>Time:</Text>
+              <Text style={styles.summaryValue}>{formatTime(selectedDateTime)}</Text>
+            </View>
+          </View>
+
+          {/* Quick Notes */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Select Haircut Type</Text>
+            <View style={styles.quickNotesGrid}>
+              {haircuts.map((haircut) => {
+                const isSelected = selectedHaircuts.includes(haircut);
+                return (
+                  <TouchableOpacity
+                    key={haircut}
+                    style={[
+                      styles.quickNoteChip,
+                      isSelected && styles.quickNoteChipSelected
+                    ]}
+                    onPress={() => handleHaircutSelect(haircut)}
+                  >
+                    <Ionicons 
+                      name={isSelected ? "checkmark-circle" : "add-circle-outline"} 
+                      size={16} 
+                      color={isSelected ? "#F5F5DC" : "#6F4E37"} 
+                    />
+                    <Text style={[
+                      styles.quickNoteText,
+                      isSelected && styles.quickNoteTextSelected
+                    ]}>
+                      {haircut}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+
+          {/* Notes Section */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Additional Notes (Optional)</Text>
+            <View style={styles.notesContainer}>
+              <TextInput
+                style={styles.notesInput}
+                value={notes}
+                onChangeText={setNotes}
+                placeholder="Add any special requests or notes for your appointment..."
+                placeholderTextColor="#999"
+                multiline
+                numberOfLines={4}
+                textAlignVertical="top"
+                maxLength={500}
+              />
+              <Text style={styles.characterCount}>{notes.length}/500</Text>
+            </View>
+          </View>
+
+          {/* Book Button */}
+          <TouchableOpacity
+            style={[styles.bookButton, loading && styles.bookButtonDisabled]}
+            onPress={handleBookAppointment}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color="#F5F5DC" />
+            ) : (
+              <>
+                <Ionicons name="checkmark-circle" size={24} color="#F5F5DC" />
+                <Text style={styles.bookButtonText}>Confirm Booking</Text>
+              </>
+            )}
+          </TouchableOpacity>
+
+          {/* Terms */}
+          <Text style={styles.termsText}>
+            By booking, you agree to our cancellation policy. Please arrive 5 minutes before your
+            appointment.
+          </Text>
+        </ScrollView>
+
+        {/* Custom DateTime Picker Modal */}
+        <CustomDateTimePicker
+          visible={showCustomPicker}
+          onClose={() => setShowCustomPicker(false)}
+          onConfirm={handleDateTimeConfirm}
+          initialDate={selectedDateTime}
+        />
+      </View>
+    </SafestView>
   );
 };
 
@@ -652,10 +691,17 @@ const styles = StyleSheet.create({
     borderColor: '#E0D5C7',
     gap: 6,
   },
+  quickNoteChipSelected: {
+    backgroundColor: '#6F4E37',
+    borderColor: '#6F4E37',
+  },
   quickNoteText: {
     fontSize: 14,
     color: '#6F4E37',
     fontWeight: '500',
+  },
+  quickNoteTextSelected: {
+    color: '#F5F5DC',
   },
   bookButton: {
     flexDirection: 'row',

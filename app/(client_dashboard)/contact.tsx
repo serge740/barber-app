@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Linking, Alert } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import SafestView from '@/components/ThemedView';
 
 export default function BarberShopDetailsScreen() {
   const shopName = "Gacuruzi Barber Shop";
@@ -30,6 +31,8 @@ export default function BarberShopDetailsScreen() {
   };
 
   return (
+    <SafestView safe no_bottom>
+
     <View style={styles.container}>
       <ScrollView 
         contentContainerStyle={styles.scrollContent}
@@ -57,7 +60,7 @@ export default function BarberShopDetailsScreen() {
             style={styles.actionButton}
             onPress={handleCall}
             activeOpacity={0.7}
-          >
+            >
             <View style={styles.actionIconContainer}>
               <Ionicons name="call" size={28} color="#fff" />
             </View>
@@ -112,7 +115,7 @@ export default function BarberShopDetailsScreen() {
             style={styles.infoCard}
             onPress={handleOpenMap}
             activeOpacity={0.7}
-          >
+            >
             <View style={styles.infoIconContainer}>
               <Ionicons name="location-outline" size={24} color="#6F4E37" />
             </View>
@@ -186,6 +189,7 @@ export default function BarberShopDetailsScreen() {
         </TouchableOpacity>
       </View>
     </View>
+            </SafestView>
   );
 }
 

@@ -297,7 +297,7 @@ const styles = StyleSheet.create({
   banner: {
     backgroundColor: '#FFF',
     padding: 24,
-    paddingTop: 60,
+    paddingTop: 30,
     position: 'relative',
     overflow: 'hidden',
     borderBottomWidth: 2,
@@ -313,7 +313,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   bannerTitle: {
-    fontSize: 32,
+    fontSize: 25,
     fontWeight: 'bold',
     color: '#6F4E37',
     marginBottom: 4,

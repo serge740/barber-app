@@ -18,41 +18,94 @@ import { useClientAuth } from '@/context/ClientAuthContext';
 import { getBookingsByUser, Booking } from '@/services/bookingService';
 import SafestView from '@/components/ThemedView';
 
+interface Payment {
+  amount: number;
+  method: 'cash' | 'cash_app' | 'zelle';
+  paidAt: any;
+}
+
+interface BookingWithPayment extends Booking {
+  payment?: Payment;
+  status?: 'pending' | 'completed';
+}
+
 type DateFilter = 'ALL' | 'TODAY' | 'WEEK' | 'MONTH' | 'YEAR';
+
+const GRACE_PERIOD_MINUTES = 40;
 
 const ClientBookingsScreen = () => {
     const { user } = useClientAuth();
-    const [bookings, setBookings] = useState<Booking[]>([]);
+    const [bookings, setBookings] = useState<BookingWithPayment[]>([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [dateFilter, setDateFilter] = useState<DateFilter>('ALL');
 
+    // === HELPER FUNCTIONS ===
 
-    
-  // Handle back button behavior
-  useFocusEffect(
-    useCallback(() => {
-      const onBackPress = () => {
-        // Check if we can go back in the navigation stack
-        if (router.canGoBack()) {
-          router.back();
-        } else {
-          // If we can't go back, navigate to dashboard instead of exiting the app
-          router.replace('/(client_dashboard)');
+    const getBookingDate = (bookingDate: any): Date => {
+        if (bookingDate?.toDate) {
+            return bookingDate.toDate();
         }
-        return true; // Prevent default back behavior
-      };
+        return new Date(bookingDate);
+    };
 
-      // Add back handler when screen is focused
-      const subscription = BackHandler.addEventListener(
-        'hardwareBackPress',
-        onBackPress
-      );
+    const getBookingEndTime = (bookingDate: Date): Date => {
+        const end = new Date(bookingDate);
+        end.setMinutes(end.getMinutes() + GRACE_PERIOD_MINUTES);
+        return end;
+    };
 
-      // Remove back handler when screen is unfocused
-      return () => subscription.remove();
-    }, [])
-  );
+    const hasGracePeriodPassed = (bookingDate: Date): boolean => {
+        const now = new Date();
+        const endTime = getBookingEndTime(bookingDate);
+        return now >= endTime;
+    };
+
+    const isBookingCompleted = (booking: BookingWithPayment): boolean => {
+        return !!(
+            booking.payment?.amount &&
+            booking.payment.amount > 0 &&
+            booking.payment.method &&
+            booking.payment.paidAt
+        );
+    };
+
+    const isToday = (bookingDate: Date): boolean => {
+        const now = new Date();
+        const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const todayEnd = new Date(todayStart);
+        todayEnd.setDate(todayEnd.getDate() + 1);
+        return bookingDate >= todayStart && bookingDate < todayEnd;
+    };
+
+    const isTomorrow = (bookingDate: Date): boolean => {
+        const now = new Date();
+        const tomorrowStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+        const tomorrowEnd = new Date(tomorrowStart);
+        tomorrowEnd.setDate(tomorrowEnd.getDate() + 1);
+        return bookingDate >= tomorrowStart && bookingDate < tomorrowEnd;
+    };
+
+    // Handle back button behavior
+    useFocusEffect(
+        useCallback(() => {
+            const onBackPress = () => {
+                if (router.canGoBack()) {
+                    router.back();
+                } else {
+                    router.replace('/(client_dashboard)');
+                }
+                return true;
+            };
+
+            const subscription = BackHandler.addEventListener(
+                'hardwareBackPress',
+                onBackPress
+            );
+
+            return () => subscription.remove();
+        }, [])
+    );
 
     const fetchBookings = async () => {
         if (!user?.id) return;
@@ -63,8 +116,8 @@ const ClientBookingsScreen = () => {
 
             // Sort by booking date (most recent first)
             const sortedBookings = userBookings.sort((a: any, b: any) => {
-                const dateA = new Date(a.bookingDate).getTime();
-                const dateB = new Date(b.bookingDate).getTime();
+                const dateA = getBookingDate(a.bookingDate).getTime();
+                const dateB = getBookingDate(b.bookingDate).getTime();
                 return dateB - dateA;
             });
 
@@ -77,7 +130,6 @@ const ClientBookingsScreen = () => {
         }
     };
 
-    // Use useFocusEffect to fetch bookings every time component mounts
     useFocusEffect(
         useCallback(() => {
             fetchBookings();
@@ -90,8 +142,7 @@ const ClientBookingsScreen = () => {
         setRefreshing(false);
     }, [user]);
 
-    const formatDate = (timestamp: any) => {
-        const date = new Date(timestamp);
+    const formatDate = (date: Date) => {
         return date.toLocaleDateString('en-US', {
             weekday: 'short',
             month: 'short',
@@ -100,30 +151,28 @@ const ClientBookingsScreen = () => {
         });
     };
 
-    const formatTime = (timestamp: any) => {
-        const date = new Date(timestamp);
+    const formatTime = (date: Date) => {
         return date.toLocaleTimeString('en-US', {
             hour: '2-digit',
             minute: '2-digit',
         });
     };
 
-    const isUpcoming = (timestamp: any) => {
-        return new Date(timestamp) > new Date();
+    const isUpcoming = (bookingDate: Date) => {
+        return bookingDate > new Date();
     };
 
-    const getDaysUntil = (timestamp: any) => {
+    const getDaysUntil = (bookingDate: Date) => {
         const now = new Date();
-        const bookingDate = new Date(timestamp);
         const diffTime = bookingDate.getTime() - now.getTime();
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
         return diffDays;
     };
 
-    const getUpcomingText = (timestamp: any) => {
-        const days = getDaysUntil(timestamp);
+    const getUpcomingText = (bookingDate: Date) => {
+        const days = getDaysUntil(bookingDate);
         
-        if (days < 0) return null; // Past booking
+        if (days < 0) return null;
         if (days === 0) return 'Today';
         if (days === 1) return 'Tomorrow';
         if (days <= 7) return `In ${days} days`;
@@ -131,13 +180,10 @@ const ClientBookingsScreen = () => {
         return `In ${Math.ceil(days / 30)} months`;
     };
 
-    const isInDateRange = (timestamp: any, filter: DateFilter): boolean => {
+    const isInDateRange = (bookingDate: Date, filter: DateFilter): boolean => {
         if (filter === 'ALL') return true;
 
         const now = new Date();
-        const bookingDate = new Date(timestamp);
-        
-        // Reset time to start of day for accurate comparison
         const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
         const bookingDay = new Date(bookingDate.getFullYear(), bookingDate.getMonth(), bookingDate.getDate());
 
@@ -147,9 +193,9 @@ const ClientBookingsScreen = () => {
             
             case 'WEEK':
                 const weekStart = new Date(today);
-                weekStart.setDate(today.getDate() - today.getDay()); // Start of week (Sunday)
+                weekStart.setDate(today.getDate() - today.getDay());
                 const weekEnd = new Date(weekStart);
-                weekEnd.setDate(weekStart.getDate() + 6); // End of week (Saturday)
+                weekEnd.setDate(weekStart.getDate() + 6);
                 return bookingDay >= weekStart && bookingDay <= weekEnd;
             
             case 'MONTH':
@@ -164,13 +210,17 @@ const ClientBookingsScreen = () => {
         }
     };
 
-    const filteredBookings = bookings.filter(booking => 
-        isInDateRange(booking.bookingDate, dateFilter)
-    );
+    const filteredBookings = bookings.filter(booking => {
+        const bookingDate = getBookingDate(booking.bookingDate);
+        return isInDateRange(bookingDate, dateFilter);
+    });
 
-    const renderBookingCard = (booking: Booking) => {
-        const upcoming = isUpcoming(booking.bookingDate);
-        const upcomingText = getUpcomingText(booking.bookingDate);
+    const renderBookingCard = (booking: BookingWithPayment) => {
+        const bookingDate = getBookingDate(booking.bookingDate);
+        const upcoming = isUpcoming(bookingDate);
+        const upcomingText = getUpcomingText(bookingDate);
+        const isCompleted = isBookingCompleted(booking);
+        const isPending = hasGracePeriodPassed(bookingDate) && !isCompleted;
 
         return (
             <TouchableOpacity
@@ -178,21 +228,35 @@ const ClientBookingsScreen = () => {
                 style={styles.bookingCard}
                 onPress={() => router.push(`/(client_dashboard)/(book)/${booking.id}`)}
             >
-                {/* Upcoming Badge */}
-                {upcoming && upcomingText && (
-                    <View style={styles.upcomingBadgeTop}>
-                        <Ionicons name="time-outline" size={16} color="#4CAF50" />
-                        <Text style={styles.upcomingBadgeTopText}>{upcomingText}</Text>
-                    </View>
-                )}
+                {/* Status Badges */}
+                <View style={styles.badgeContainer}>
+                    {isCompleted && (
+                        <View style={styles.completedBadge}>
+                            <Ionicons name="checkmark-circle" size={16} color="#10B981" />
+                            <Text style={styles.completedBadgeText}>Completed</Text>
+                        </View>
+                    )}
+                    {isPending && (
+                        <View style={styles.pendingBadge}>
+                            <Ionicons name="alert-circle" size={16} color="#EF4444" />
+                            <Text style={styles.pendingBadgeText}>Pending Payment</Text>
+                        </View>
+                    )}
+                    {upcoming && upcomingText && !isCompleted && !isPending && (
+                        <View style={styles.upcomingBadge}>
+                            <Ionicons name="time-outline" size={16} color="#059669" />
+                            <Text style={styles.upcomingBadgeText}>{upcomingText}</Text>
+                        </View>
+                    )}
+                </View>
 
                 {/* Booking Info */}
                 <View style={styles.bookingInfo}>
                     <View style={styles.bookingDateContainer}>
                         <Ionicons name="calendar" size={24} color="#6F4E37" />
                         <View style={styles.bookingDateInfo}>
-                            <Text style={styles.bookingDate}>{formatDate(booking.bookingDate)}</Text>
-                            <Text style={styles.bookingTime}>{formatTime(booking.bookingDate)}</Text>
+                            <Text style={styles.bookingDate}>{formatDate(bookingDate)}</Text>
+                            <Text style={styles.bookingTime}>{formatTime(bookingDate)}</Text>
                         </View>
                         <Ionicons name="chevron-forward" size={20} color="#999" />
                     </View>
@@ -206,11 +270,23 @@ const ClientBookingsScreen = () => {
                         </View>
                     )}
 
+                    {/* Payment Info (if completed) */}
+                    {isCompleted && booking.payment && (
+                        <View style={styles.paymentInfoContainer}>
+                            <Ionicons name="cash-outline" size={16} color="#10B981" />
+                            <Text style={styles.paymentInfoText}>
+                                Paid ${booking.payment.amount.toFixed(2)} via{' '}
+                                {booking.payment.method === 'cash' ? 'Cash' : 
+                                 booking.payment.method === 'cash_app' ? 'Cash App' : 'Zelle'}
+                            </Text>
+                        </View>
+                    )}
+
                     {booking.createdAt && (
                         <View style={styles.createdAtContainer}>
                             <Ionicons name="time-outline" size={14} color="#999" />
                             <Text style={styles.createdAtText}>
-                                Booked on {formatDate(booking.createdAt.toDate())}
+                                Booked on {formatDate(booking.createdAt.toDate ? booking.createdAt.toDate() : new Date(booking.createdAt))}
                             </Text>
                         </View>
                     )}
@@ -220,102 +296,101 @@ const ClientBookingsScreen = () => {
     };
 
     return (
-         <SafestView safe no_bottom >
+        <SafestView safe no_bottom>
+            <View style={styles.container}>
+                <StatusBar barStyle="light-content" backgroundColor="#6F4E37" />
 
-        <View style={styles.container}>
-            <StatusBar barStyle="light-content" backgroundColor="#6F4E37" />
-
-            {/* Header */}
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-                    <Ionicons name="arrow-back" size={24} color="#6F4E37" />
-                </TouchableOpacity>
-                <Text style={styles.headerTitle}>My Bookings</Text>
-                <TouchableOpacity onPress={() => router.push('/(client_dashboard)/(book)/new')} style={styles.addButton}>
-                    <Ionicons name="add" size={24} color="#6F4E37" />
-                </TouchableOpacity>
-            </View>
-
-            {/* Filter Tabs */}
-            <View style={styles.filterContainer}>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterScroll}>
-                    {[
-                        { key: 'ALL', label: 'All' },
-                        { key: 'TODAY', label: 'Today' },
-                        { key: 'WEEK', label: 'This Week' },
-                        { key: 'MONTH', label: 'This Month' },
-                        { key: 'YEAR', label: 'This Year' },
-                    ].map((filter) => (
-                        <TouchableOpacity
-                            key={filter.key}
-                            style={[
-                                styles.filterTab,
-                                dateFilter === filter.key && styles.filterTabActive,
-                            ]}
-                            onPress={() => setDateFilter(filter.key as DateFilter)}
-                        >
-                            <Text
-                                style={[
-                                    styles.filterTabText,
-                                    dateFilter === filter.key && styles.filterTabTextActive,
-                                ]}
-                                >
-                                {filter.label}
-                            </Text>
-                        </TouchableOpacity>
-                    ))}
-                </ScrollView>
-            </View>
-
-            {/* Content */}
-            {loading ? (
-                <View style={styles.centerContainer}>
-                    <ActivityIndicator size="large" color="#6F4E37" />
-                    <Text style={styles.loadingText}>Loading your bookings...</Text>
+                {/* Header */}
+                <View style={styles.header}>
+                    <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+                        <Ionicons name="arrow-back" size={24} color="#6F4E37" />
+                    </TouchableOpacity>
+                    <Text style={styles.headerTitle}>My Bookings</Text>
+                    <TouchableOpacity onPress={() => router.push('/(client_dashboard)/(book)/new')} style={styles.addButton}>
+                        <Ionicons name="add" size={24} color="#6F4E37" />
+                    </TouchableOpacity>
                 </View>
-            ) : (
-                <ScrollView
-                    style={styles.scrollView}
-                    contentContainerStyle={styles.scrollContent}
-                    showsVerticalScrollIndicator={false}
-                    refreshControl={
-                        <RefreshControl
-                        refreshing={refreshing}
-                        onRefresh={onRefresh}
-                        tintColor="#6F4E37"
-                        colors={['#6F4E37']}
-                        />
-                    }
-                >
-                    {filteredBookings.length === 0 ? (
-                        <View style={styles.emptyContainer}>
-                            <Ionicons name="calendar-outline" size={80} color="#D0C4B0" />
-                            <Text style={styles.emptyTitle}>No Bookings Found</Text>
-                            <Text style={styles.emptyText}>
-                                {dateFilter === 'ALL'
-                                    ? "You haven't made any bookings yet."
-                                    : `No bookings for ${dateFilter.toLowerCase()}.`}
-                            </Text>
+
+                {/* Filter Tabs */}
+                <View style={styles.filterContainer}>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterScroll}>
+                        {[
+                            { key: 'ALL', label: 'All' },
+                            { key: 'TODAY', label: 'Today' },
+                            { key: 'WEEK', label: 'This Week' },
+                            { key: 'MONTH', label: 'This Month' },
+                            { key: 'YEAR', label: 'This Year' },
+                        ].map((filter) => (
                             <TouchableOpacity
-                                style={styles.bookNowButton}
-                                onPress={() => router.push('/(client_dashboard)/(book)/new')}
+                                key={filter.key}
+                                style={[
+                                    styles.filterTab,
+                                    dateFilter === filter.key && styles.filterTabActive,
+                                ]}
+                                onPress={() => setDateFilter(filter.key as DateFilter)}
                             >
-                                <Ionicons name="add-circle" size={20} color="#F5F5DC" />
-                                <Text style={styles.bookNowButtonText}>Book Now</Text>
+                                <Text
+                                    style={[
+                                        styles.filterTabText,
+                                        dateFilter === filter.key && styles.filterTabTextActive,
+                                    ]}
+                                >
+                                    {filter.label}
+                                </Text>
                             </TouchableOpacity>
-                        </View>
-                    ) : (
-                        <>
-                            <Text style={styles.resultsCount}>
-                                {filteredBookings.length} {filteredBookings.length === 1 ? 'booking' : 'bookings'}
-                            </Text>
-                            {filteredBookings.map(renderBookingCard)}
-                        </>
-                    )}
-                </ScrollView>
-            )}
-        </View>
-</SafestView>
+                        ))}
+                    </ScrollView>
+                </View>
+
+                {/* Content */}
+                {loading ? (
+                    <View style={styles.centerContainer}>
+                        <ActivityIndicator size="large" color="#6F4E37" />
+                        <Text style={styles.loadingText}>Loading your bookings...</Text>
+                    </View>
+                ) : (
+                    <ScrollView
+                        style={styles.scrollView}
+                        contentContainerStyle={styles.scrollContent}
+                        showsVerticalScrollIndicator={false}
+                        refreshControl={
+                            <RefreshControl
+                                refreshing={refreshing}
+                                onRefresh={onRefresh}
+                                tintColor="#6F4E37"
+                                colors={['#6F4E37']}
+                            />
+                        }
+                    >
+                        {filteredBookings.length === 0 ? (
+                            <View style={styles.emptyContainer}>
+                                <Ionicons name="calendar-outline" size={80} color="#D0C4B0" />
+                                <Text style={styles.emptyTitle}>No Bookings Found</Text>
+                                <Text style={styles.emptyText}>
+                                    {dateFilter === 'ALL'
+                                        ? "You haven't made any bookings yet."
+                                        : `No bookings for ${dateFilter.toLowerCase()}.`}
+                                </Text>
+                                <TouchableOpacity
+                                    style={styles.bookNowButton}
+                                    onPress={() => router.push('/(client_dashboard)/(book)/new')}
+                                >
+                                    <Ionicons name="add-circle" size={20} color="#F5F5DC" />
+                                    <Text style={styles.bookNowButtonText}>Book Now</Text>
+                                </TouchableOpacity>
+                            </View>
+                        ) : (
+                            <>
+                                <Text style={styles.resultsCount}>
+                                    {filteredBookings.length} {filteredBookings.length === 1 ? 'booking' : 'bookings'}
+                                </Text>
+                                {filteredBookings.map(renderBookingCard)}
+                            </>
+                        )}
+                    </ScrollView>
+                )}
+            </View>
+        </SafestView>
     );
 };
 
@@ -424,20 +499,52 @@ const styles = StyleSheet.create({
         shadowRadius: 4,
         elevation: 2,
     },
-    upcomingBadgeTop: {
+    badgeContainer: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 8,
+        marginBottom: 12,
+    },
+    completedBadge: {
         flexDirection: 'row',
         alignItems: 'center',
-        alignSelf: 'flex-start',
         paddingHorizontal: 12,
         paddingVertical: 6,
         borderRadius: 16,
-        backgroundColor: '#E8F5E9',
-        marginBottom: 12,
+        backgroundColor: '#D1FAE5',
         gap: 6,
     },
-    upcomingBadgeTopText: {
+    completedBadgeText: {
         fontSize: 12,
-        color: '#4CAF50',
+        color: '#10B981',
+        fontWeight: '600',
+    },
+    pendingBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 16,
+        backgroundColor: '#FEE2E2',
+        gap: 6,
+    },
+    pendingBadgeText: {
+        fontSize: 12,
+        color: '#EF4444',
+        fontWeight: '600',
+    },
+    upcomingBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 16,
+        backgroundColor: '#D1FAE5',
+        gap: 6,
+    },
+    upcomingBadgeText: {
+        fontSize: 12,
+        color: '#059669',
         fontWeight: '600',
     },
     bookingInfo: {
@@ -474,6 +581,20 @@ const styles = StyleSheet.create({
         fontSize: 14,
         color: '#666',
         lineHeight: 20,
+    },
+    paymentInfoContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        backgroundColor: '#D1FAE5',
+        padding: 12,
+        borderRadius: 8,
+    },
+    paymentInfoText: {
+        flex: 1,
+        fontSize: 13,
+        color: '#059669',
+        fontWeight: '500',
     },
     createdAtContainer: {
         flexDirection: 'row',
