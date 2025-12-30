@@ -85,11 +85,12 @@ export default function LoginScreen() {
         >
         {/* Header Image */}
         <View style={styles.imageContainer}>
-          <Image
-            source={{ uri: 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=800&q=80' }}
-            style={styles.headerImage}
-            resizeMode="cover"
-          />
+        <Image
+  source={require('../../assets/images/shop.jpg')}
+  style={styles.headerImage}
+  resizeMode="cover"
+/>
+
           <View style={styles.overlay} />
         </View>
 
@@ -249,7 +250,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF',
     borderRadius: 12,
     paddingHorizontal: 10,
-    paddingVertical: 10,
+    paddingVertical: 5,
     marginBottom: 16,
     borderWidth: 1,
     borderColor: '#E0E0E0',

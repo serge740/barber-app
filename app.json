@@ -1,21 +1,21 @@
 {
   "expo": {
     "name": "Gacuruzi BarberShop",
-    "slug": "gacurizi",
+    "slug": "quicktrim",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/quick.png",
-    "scheme": "gacurizi",
+    "scheme": "gacuruzi",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
       "googleServicesFile": "./GoogleService-Info.plist",
-      "bundleIdentifier": "com.gacurizi.barber",
+      "bundleIdentifier": "com.quickcut.barber",
       "supportsTablet": true
     },
     "android": {
       "googleServicesFile": "./google-services.json",
-      "package": "com.gacurizi.barber",
+      "package": "com.quickcut.barber",
         "adaptiveIcon": {
         "foregroundImage": "./assets/images/quick.png",
         "backgroundColor": "#F5F5DC"
@@ -35,9 +35,9 @@
           "image": "./assets/images/quick.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#F5F5DC",
+          "backgroundColor": "#ffffff",
           "dark": {
-            "backgroundColor": "#F5F5DC"
+            "backgroundColor": "#000000"
           }
         }
       ],

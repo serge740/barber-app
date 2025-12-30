@@ -54,8 +54,10 @@ export default function DashboardLayout() {
         />
         <Tabs.Screen
           name="(users)"
+          
           options={{
             title: 'Users',
+            
             tabBarIcon: ({ color, size }) => (
               <Ionicons name="people-circle" size={size} color={color} />
             ),
